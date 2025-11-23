@@ -65,6 +65,22 @@ def add_batter_rolling(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+def add_matchup_handedness(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add numeric features for batter/pitcher handedness matchup.
+      - is_same_hand: 1 if batter and pitcher use same hand, else 0
+      - is_lefty_batter: 1 if batter stands left
+      - is_lefty_pitcher: 1 if pitcher throws left
+    """
+    # Make sure we’re working with strings (batter_stand and pitcher_hand are categories)
+    df["batter_stand"] = df["batter_stand"].astype(str)
+    df["pitcher_hand"] = df["pitcher_hand"].astype(str)
+
+    df["is_same_hand"] = (df["batter_stand"] == df["pitcher_hand"]).astype("int8")
+    df["is_lefty_batter"] = (df["batter_stand"] == "L").astype("int8")
+    df["is_lefty_pitcher"] = (df["pitcher_hand"] == "L").astype("int8")
+
+    return df
 
 def add_pitch_context(df: pd.DataFrame) -> pd.DataFrame:
     """Add count/baserunner context flags."""
@@ -94,6 +110,11 @@ FINAL_COLUMNS = [
     "avg_spin_rate",
     "avg_plate_x",
     "avg_plate_z",
+
+    # Handedness features
+    "is_same_hand",
+    "is_lefty_batter",
+    "is_lefty_pitcher",
 
     # Context
     "inning", "balls", "strikes", "outs_when_up", "has_runner_on",
@@ -132,6 +153,9 @@ def main():
     print("Loading pitcher profiles...")
     profiles = load_pitcher_profiles()
     df = merge_pitcher_profiles(df, profiles)
+
+    print("Adding handedness features...")
+    df = add_matchup_handedness(df)
 
     print("Computing rolling batter features...")
     df = add_batter_rolling(df)
