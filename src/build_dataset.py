@@ -25,6 +25,70 @@ def add_hit_label(df: pd.DataFrame) -> pd.DataFrame:
     df["is_hit"] = df["event"].isin(hit_events).astype("int8")
     return df
 
+OUTCOME_LABELS = [
+    "single",
+    "double",
+    "triple",
+    "home_run",
+    "walk",
+    "strikeout",
+    "ball_in_play_out",
+    "other",
+]
+
+OUTCOME_TO_ID = {label: i for i, label in enumerate(OUTCOME_LABELS)}
+
+
+def add_outcome_label(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Map Statcast 'event' strings into a multiclass outcome label and ID.
+    Only meaningful for pitches where an event occurred (end of PA).
+    """
+
+    def map_event(ev: str) -> str:
+        if pd.isna(ev):
+            return "other"  # non-terminal pitches; we'll probably drop these for multiclass
+
+        ev = str(ev).lower()
+
+        if ev == "single":
+            return "single"
+        if ev == "double":
+            return "double"
+        if ev == "triple":
+            return "triple"
+        if ev == "home_run":
+            return "home_run"
+
+        if ev in {"walk", "intent_walk"}:
+            return "walk"
+
+        if "strikeout" in ev:
+            # covers "strikeout", "strikeout_double_play"
+            return "strikeout"
+
+        if ev in {
+            "field_out",
+            "grounded_into_double_play",
+            "force_out",
+            "double_play",
+            "field_error",
+            "sac_fly",
+            "sac_bunt",
+        }:
+            return "ball_in_play_out"
+
+        if ev in {"hit_by_pitch", "catcher_interf"}:
+            return "other"
+
+        # Any rare or unknown cases
+        return "other"
+
+    df["outcome"] = df["event"].map(map_event)
+    df["outcome_id"] = df["outcome"].map(OUTCOME_TO_ID).astype("Int8")
+
+    return df
+
 def load_pitcher_profiles() -> pd.DataFrame:
     """Load aggregated pitcher profiles."""
     path = config.PITCHER_PROFILES_DIR / "pitcher_profiles.parquet"
@@ -123,8 +187,10 @@ FINAL_COLUMNS = [
     # Pitch info
     "pitch_type", "release_vel", "spin_rate", "plate_x", "plate_z",
 
-    # Target
+    # Targets
     "is_hit",
+    "outcome",
+    "outcome_id",
 ]
 
 def finalize_and_save(df: pd.DataFrame) -> None:
@@ -146,6 +212,12 @@ def main():
 
     print("Adding hit label...")
     df = add_hit_label(df)
+
+    print("Adding hit label...")
+    df = add_hit_label(df)
+
+    print("Adding multiclass outcome label...")
+    df = add_outcome_label(df)
 
     print("Adding pitch context features...")
     df = add_pitch_context(df)
