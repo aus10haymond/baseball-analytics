@@ -4,6 +4,7 @@ from typing import List, Tuple
 import json
 import pandas as pd
 import numpy as np
+from collections import Counter
 
 from sklearn.metrics import (
     accuracy_score,
@@ -71,33 +72,44 @@ def make_xy_multiclass(df: pd.DataFrame, feature_cols: List[str]):
     return X, y
 
 def train_xgb_multiclass(X_train, y_train, X_val, y_val):
-    num_classes = len(OUTCOME_LABELS)
-
     params = {
         "objective": "multi:softprob",
+        "num_class": len(OUTCOME_LABELS),
         "eval_metric": "mlogloss",
         "eta": 0.05,
         "max_depth": 6,
         "subsample": 0.8,
         "colsample_bytree": 0.8,
         "n_estimators": 500,
-        "num_class": num_classes,
     }
 
+    # Compute class weights (inverse frequency)
+    class_counts = Counter(y_train)
+    total = len(y_train)
+
+    class_weight = {
+        cls: total / (len(class_counts) * count)
+        for cls, count in class_counts.items()
+    }
+
+    sample_weight = np.array([class_weight[c] for c in y_train])
+
     model = xgb.XGBClassifier(**params)
-    model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
 
-    val_probs = model.predict_proba(X_val)
-    val_preds = val_probs.argmax(axis=1)
+    model.fit(
+        X_train,
+        y_train,
+        sample_weight=sample_weight,
+        eval_set=[(X_val, y_val)],
+        verbose=False,
+    )
 
-    acc = accuracy_score(y_val, val_preds)
-    macro_f1 = f1_score(y_val, val_preds, average="macro")
-
-    print("\nXGBoost Multiclass Model (val):")
-    print(f"Accuracy: {acc:.4f}")
-    print(f"Macro F1: {macro_f1:.4f}")
+    # Quick sanity print
+    print("\nClass counts (train):", class_counts)
+    print("Class weights:", class_weight)
 
     return model
+
 
 def evaluate_multiclass_on_test(model, X_test, y_test):
     probs = model.predict_proba(X_test)

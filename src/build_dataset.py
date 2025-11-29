@@ -40,14 +40,10 @@ OUTCOME_TO_ID = {label: i for i, label in enumerate(OUTCOME_LABELS)}
 
 
 def add_outcome_label(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Map Statcast 'event' strings into a multiclass outcome label and ID.
-    Only meaningful for pitches where an event occurred (end of PA).
-    """
-
-    def map_event(ev: str) -> str:
+    def map_event(ev: str):
+        # If no event recorded, this is a non-terminal pitch: no outcome label
         if pd.isna(ev):
-            return "other"  # non-terminal pitches; we'll probably drop these for multiclass
+            return None
 
         ev = str(ev).lower()
 
@@ -64,7 +60,6 @@ def add_outcome_label(df: pd.DataFrame) -> pd.DataFrame:
             return "walk"
 
         if "strikeout" in ev:
-            # covers "strikeout", "strikeout_double_play"
             return "strikeout"
 
         if ev in {
@@ -81,13 +76,13 @@ def add_outcome_label(df: pd.DataFrame) -> pd.DataFrame:
         if ev in {"hit_by_pitch", "catcher_interf"}:
             return "other"
 
-        # Any rare or unknown cases
         return "other"
 
     df["outcome"] = df["event"].map(map_event)
     df["outcome_id"] = df["outcome"].map(OUTCOME_TO_ID).astype("Int8")
 
     return df
+
 
 def load_pitcher_profiles() -> pd.DataFrame:
     """Load aggregated pitcher profiles."""
