@@ -1,0 +1,43 @@
+# Core dependencies
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+
+# Async and messaging
+redis>=5.0.0
+asyncio
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Machine Learning
+scikit-learn>=1.3.0
+xgboost>=2.0.0
+shap>=0.42.0  # For explainability
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.12.0  # For migrations
+
+# LLM integration (optional)
+openai>=1.0.0
+anthropic>=0.7.0
+
+# Monitoring and logging
+prometheus-client>=0.18.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Code quality
+ruff>=0.1.0
+mypy>=1.7.0
+black>=23.0.0
+
+# Utilities
+pyarrow>=14.0.0  # For parquet files
+joblib>=1.3.0  # For model loading
+httpx>=0.25.0  # For async HTTP requests
