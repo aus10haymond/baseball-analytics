@@ -1,0 +1,111 @@
+# ---------------------------
+# Python
+# ---------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.venv/
+.ipynb_checkpoints/
+*.egg-info/
+*.egg
+*.manifest
+*.spec
+
+# ---------------------------
+# VS Code / Editor junk
+# ---------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ---------------------------
+# OS-specific
+# ---------------------------
+.DS_Store
+Thumbs.db
+
+# ---------------------------
+# Jupyter
+# ---------------------------
+.ipynb_checkpoints
+jupyter_cache/
+.jupyter/
+
+# ---------------------------
+# Logs & temp files
+# ---------------------------
+*.log
+logs/
+tmp/
+temp/
+
+# ---------------------------
+# Build artifacts
+# ---------------------------
+build/
+dist/
+*.tar.gz
+
+# ---------------------------
+# Machine Learning Stuff
+# ---------------------------
+# Model artifacts
+models/*.joblib
+models/*.pkl
+models/*.bin
+models/*.onnx
+models/*.json
+
+# Checkpoints / tensors
+**/checkpoints/
+**/*.ckpt
+
+# ---------------------------
+# Data directories (Statcast, processed, modeling, etc.)
+# These folders will be huge - DO NOT commit them.
+# ---------------------------
+data/
+!data/.gitkeep   # keep empty directories if needed
+
+results/
+!results/.gitkeep
+
+# If you want to save small demo files, whitelist manually:
+# !data/sample/
+# !results/plots/sample.png
+
+# ---------------------------
+# Streamlit / App Stuff
+# ---------------------------
+.streamlit/
+
+# ---------------------------
+# Cache
+# ---------------------------
+.cache/
+cache/
+**/__pycache__/
+*.pickle
+*.parquet
+*.h5
+*.db
+*.sqlite3
+
+# ---------------------------
+# Credentials (just in case)
+# ---------------------------
+*.env
+*.ini
+*.cfg
+secrets.json
+
+# ---------------------------
+# Misc
+# ---------------------------
+*~  
