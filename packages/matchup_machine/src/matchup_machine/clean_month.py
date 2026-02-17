@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
-import config
+from . import config
 
 RAW_PATTERN = "statcast_*.parquet"
 CLEAN_NAME = "statcast_clean_{:04d}_{:02d}.parquet"

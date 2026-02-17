@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 
-import config
+from . import config
 
 
 def load_terminal_pas() -> pd.DataFrame:

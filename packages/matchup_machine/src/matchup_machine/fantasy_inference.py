@@ -10,9 +10,9 @@ import joblib
 import numpy as np
 import pandas as pd
 
-import config
-from build_dataset import OUTCOME_LABELS
-from train_hit_model import fill_missing_values  # reuse your imputer
+from . import config
+from .build_dataset import OUTCOME_LABELS
+from .train_hit_model import fill_missing_values  # reuse your imputer
 
 
 # Paths to model + metadata

@@ -3,7 +3,7 @@ from typing import List
 
 import pandas as pd
 
-import config
+from . import config
 
 # File patterns / names
 CLEAN_PATTERN = "statcast_clean_*.parquet"

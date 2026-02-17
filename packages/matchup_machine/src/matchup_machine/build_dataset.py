@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import List
 import pandas as pd
 
-import config
+from . import config
 
 def list_clean_month_files() -> List[Path]:
     """Return sorted list of cleaned month parquet files."""

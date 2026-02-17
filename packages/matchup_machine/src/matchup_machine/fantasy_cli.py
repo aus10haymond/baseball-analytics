@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import argparse
 
-from fantasy_scoring import expected_hitter_points_per_pa
-from fantasy_inference import (
+from .fantasy_scoring import expected_hitter_points_per_pa
+from .fantasy_inference import (
     load_artifacts,
     find_player_id,
     lookup_projected_pa,

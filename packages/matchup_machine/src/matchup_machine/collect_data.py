@@ -5,7 +5,7 @@ from pybaseball import statcast
 import pandas as pd
 import time
 
-import config
+from . import config
 
 def month_ranges(start: date, end: date) -> List[Tuple[date, date]]:
     if end < start:

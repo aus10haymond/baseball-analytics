@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from pybaseball import playerid_reverse_lookup
 
-import config
+from . import config
 
 
 def load_matchups() -> pd.DataFrame:

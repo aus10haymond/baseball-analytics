@@ -13,7 +13,7 @@ from sklearn.metrics import (
 import xgboost as xgb
 import joblib
 
-import config
+from . import config
 
 def load_matchup_dataset() -> pd.DataFrame:
     path = config.MODELING_DIR / "matchups.parquet"

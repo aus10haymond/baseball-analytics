@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Dict
-from build_dataset import OUTCOME_LABELS
+from .build_dataset import OUTCOME_LABELS
 
 """
 Fantasy scoring rules (hitting only) based on your league:
