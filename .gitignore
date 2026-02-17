@@ -281,3 +281,7 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Internal documents (for AI assistant reference)
+.codebase_reference.md
+PLAN.md
