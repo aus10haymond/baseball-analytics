@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.log
+log.txt
+collection_log.txt
+data/model_training/
+data/recs/
+data/recommendations*.csv
+data/mlb_games_today.csv
+data/my_roster.csv
+data/draft_rankings
+.vscode/
+AGENTS.md
