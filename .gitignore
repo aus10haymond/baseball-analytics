@@ -205,3 +205,79 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ============================================
+# Diamond Mind - Project Specific
+# ============================================
+
+# Credentials & API Keys (CRITICAL)
+.env
+.env.*
+secrets.json
+*_credentials.json
+config/secrets.yaml
+*.pem
+*.key
+
+# Machine Learning Models (large files)
+models/*.joblib
+models/*.pkl
+models/*.pickle
+models/*.bin
+models/*.onnx
+models/*.h5
+models/*.pth
+models/*.safetensors
+
+# Checkpoints
+**/checkpoints/
+**/*.ckpt
+**/*.checkpoint
+
+# Data files (don't commit large datasets)
+data/raw/
+data/processed/
+data/modeling/
+*.parquet
+*.parquet.gzip
+*.db
+*.sqlite
+*.sqlite3
+
+# Agent-specific
+agents/**/state/
+agents/**/logs/
+agents/**/cache/
+agent_reports/
+agent_decisions/
+agent_state.json
+
+# Message queue data
+redis-data/
+*.rdb
+dump.rdb
+
+# Sister repos (managed separately)
+fantasy_mlb_ai/
+matchup_machine/
+external/
+
+# Outputs
+reports/generated/
+results/
+data/draft_rankings/
+data/recs/
+
+# Monitoring & Observability
+prometheus-data/
+grafana-data/
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
