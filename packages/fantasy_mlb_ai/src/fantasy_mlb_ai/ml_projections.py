@@ -5,26 +5,18 @@ Connects matchup_machine XGBoost models with fantasy_mlb_ai's daily roster manag
 Generates matchup-specific fantasy point projections based on probable pitchers.
 """
 
-import sys
-import os
-from pathlib import Path
 from typing import Dict, Optional, Tuple
 import pandas as pd
-
-# Add matchup_machine to path
-MATCHUP_MACHINE_PATH = Path(__file__).parent.parent / "matchup_machine" / "src"
-sys.path.insert(0, str(MATCHUP_MACHINE_PATH))
+import numpy as np
 
 try:
-    from fantasy_inference import (
+    from matchup_machine.fantasy_inference import (
         load_artifacts,
         find_player_id,
         estimate_batter_outcome_probs_from_history,
     )
-    from fantasy_scoring import expected_hitter_points_per_pa
-    from train_hit_model import fill_missing_values
-    from build_dataset import OUTCOME_LABELS
-    import numpy as np
+    from matchup_machine.fantasy_scoring import expected_hitter_points_per_pa
+    from matchup_machine.build_dataset import OUTCOME_LABELS
     
     ML_AVAILABLE = True
 except ImportError as e:

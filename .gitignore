@@ -1,0 +1,200 @@
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[codz]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+*.so
+.Python
+
+# ============================================
+# Virtual Environments
+# ============================================
+env/
+venv/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# ============================================
+# Distribution / Packaging
+# ============================================
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ============================================
+# IDE / Editors
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursorignore
+.cursorindexingignore
+
+# ============================================
+# OS Files
+# ============================================
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Jupyter
+# ============================================
+.ipynb_checkpoints/
+jupyter_cache/
+.jupyter/
+*.ipynb_checkpoints
+
+# ============================================
+# Testing / Coverage
+# ============================================
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# ============================================
+# Type Checking / Linting
+# ============================================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.ruff_cache/
+
+# ============================================
+# Logs
+# ============================================
+*.log
+log.txt
+collection_log.txt
+logs/
+
+# ============================================
+# Credentials & Secrets (CRITICAL)
+# ============================================
+.env
+.env.*
+.envrc
+secrets.json
+*_credentials.json
+config/secrets.yaml
+*.pem
+*.key
+.pypirc
+
+# ============================================
+# Machine Learning Models & Artifacts
+# ============================================
+# Model files (large binary files)
+models/*.joblib
+models/*.pkl
+models/*.pickle
+models/*.bin
+models/*.onnx
+models/*.h5
+models/*.pth
+models/*.safetensors
+
+# Checkpoints
+**/checkpoints/
+**/*.ckpt
+**/*.checkpoint
+
+# ============================================
+# Data Directories (DO NOT COMMIT LARGE DATA)
+# ============================================
+data/
+!data/.gitkeep
+data/raw/
+data/processed/
+data/modeling/
+data/recs/
+data/recommendations*.csv
+data/mlb_games_today.csv
+data/my_roster.csv
+data/draft_rankings/
+data/model_training/
+
+# Data file types
+*.parquet
+*.parquet.gzip
+*.h5
+*.pickle
+
+# ============================================
+# Database Files
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+dump.rdb
+*.rdb
+
+# ============================================
+# Project-Specific
+# ============================================
+# Redis
+redis-data/
+
+# Agent state & outputs
+agents/**/state/
+agents/**/logs/
+agents/**/cache/
+agent_reports/
+agent_decisions/
+agent_state.json
+
+# Reports & Results
+reports/generated/
+results/
+!results/.gitkeep
+
+# Monitoring
+prometheus-data/
+grafana-data/
+
+# Build artifacts
+tmp/
+temp/
+cache/
+.cache/
+
+# Streamlit
+.streamlit/
+
+# Internal planning docs
+.codebase_reference.md
+PLAN.md
+AGENTS.md

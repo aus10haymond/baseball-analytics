@@ -43,6 +43,8 @@ dependencies = [
     "pyarrow>=14.0.0",
     "joblib>=1.3.0",
     "httpx>=0.25.0",
+    "matchup-machine",  # Workspace dependency
+    "fantasy-mlb-ai",   # Workspace dependency
 ]
 
 [project.optional-dependencies]
@@ -65,7 +67,8 @@ Repository = "https://github.com/yourusername/diamond-mind"
 Documentation = "https://github.com/yourusername/diamond-mind/tree/main/docs"
 
 [tool.setuptools]
-packages = ["shared", "agents", "integrations"]
+packages = ["diamond_mind"]
+package-dir = {"" = "src"}
 
 [tool.black]
 line-length = 100
@@ -89,7 +92,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 [tool.coverage.run]
-source = ["shared", "agents", "integrations"]
+source = ["diamond_mind"]
 omit = ["tests/*", "**/__pycache__/*"]
 
 [tool.coverage.report]

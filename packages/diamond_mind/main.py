@@ -8,7 +8,7 @@ import asyncio
 import signal
 from typing import List
 
-from shared import (
+from diamond_mind.shared import (
     settings,
     ensure_directories,
     init_messaging,
@@ -16,7 +16,7 @@ from shared import (
     get_agent_logger,
 )
 
-from agents.data_quality.agent import DataQualityAgent
+from diamond_mind.agents.data_quality.agent import DataQualityAgent
 # Import other agents as they're implemented
 # from agents.orchestrator.agent import OrchestratorAgent
 # from agents.model_monitor.agent import ModelMonitorAgent

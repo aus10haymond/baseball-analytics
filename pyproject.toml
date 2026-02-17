@@ -1,0 +1,45 @@
+[project]
+name = "baseball-analytics"
+version = "0.1.0"
+description = "MLB analytics monorepo - unified workspace for matchup prediction, fantasy management, and ML orchestration"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Austen Haymond"}
+]
+
+# Workspace configuration for uv
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+matchup-machine = { workspace = true }
+fantasy-mlb-ai = { workspace = true }
+diamond-mind = { workspace = true }
+
+# Shared development dependencies
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+    "mypy>=1.7.0",
+    "black>=23.0.0",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]  # Line length handled by black
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
