@@ -351,28 +351,6 @@ DM_AGENT_NAME_ENABLED=true  # In .env
 # Either set paths in .env or ensure they're in ../
 ```
 
-## 📈 Roadmap
-
-- [x] Infrastructure (Redis, schemas, logging, base agent)
-- [ ] Phase 1: Testing framework
-- [ ] Phase 2: Data Quality Agent
-- [ ] Phase 3: Model Monitor Agent
-- [ ] Phase 4: Orchestrator Agent
-- [ ] Phase 5: Feature Engineer Agent
-- [ ] Phase 6: Explainer Agent
-- [ ] Phase 7: Integration testing
-- [ ] Phase 8: Production (Docker, monitoring, API)
-
-See [PLAN.md](PLAN.md) for detailed roadmap.
-
-## 🤝 Contributing
-
-1. Pick an agent to implement (see [PLAN.md](PLAN.md))
-2. Follow the stub pattern in `agents/{agent_name}/agent.py`
-3. Write tests as you go
-4. Update documentation
-5. Submit PR
-
 ## 📝 License
 
 MIT License - see [LICENSE](LICENSE)
@@ -392,4 +370,3 @@ Austen Haymond
 ---
 
 **Built with**: Python, Redis, Pydantic, XGBoost, AsyncIO  
-**Status**: Infrastructure Complete ✅ | Agents Ready for Implementation 🚧
