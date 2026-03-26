@@ -105,3 +105,8 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
+
+[dependency-groups]
+dev = [
+    "fakeredis>=2.34.1",
+]
