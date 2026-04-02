@@ -2,7 +2,7 @@
 Enhanced Recommendation Engine with ML Projections
 
 Integrates matchup_machine's XGBoost models to provide data-driven
-fantasy baseball lineup recommendations.
+fantasy baseball lineup recommendations with pitcher-aware projections.
 """
 
 import pandas as pd
@@ -12,8 +12,10 @@ import subprocess
 import sys
 import os
 
-# Import ML projection engine
+# Import projection engines
 from ml_projections import MLProjectionEngine
+from pitcher_aware_projections import PitcherAwareEngine
+from prediction_tracker import PredictionTracker
 
 # Run fetch_daily_data.py before starting recommendations
 def run_data_fetch():
@@ -105,22 +107,43 @@ def get_teams_playing_on(date_str):
 teams_today = get_teams_playing_on(today_str)
 teams_tomorrow = get_teams_playing_on(tomorrow_str)
 
-# === Initialize ML Engine ===
+# === Initialize Pitcher-Aware Engine ===
 print("\n" + "="*60)
-print("Initializing ML Projection Engine")
+print("Initializing Pitcher-Aware Projection Engine")
 print("="*60)
-ml_engine = MLProjectionEngine()
+pa_engine = PitcherAwareEngine()
 
-# === Get ML Projections for Roster ===
+# Fallback to general ML engine if pitcher-aware not available
+ml_engine = MLProjectionEngine() if not pa_engine.ml_available else None
+
+# === Get Projections for Roster ===
 print("\n" + "="*60)
-print("Generating ML Projections")
+print("Generating Pitcher-Aware Projections")
 print("="*60)
 
-roster_with_ml = ml_engine.get_roster_projections(
-    roster_df, 
-    games_df, 
-    team_name_map
-)
+if pa_engine.ml_available:
+    roster_with_ml = pa_engine.get_roster_matchup_projections(
+        roster_df,
+        team_name_map,
+        default_pa=4
+    )
+    # Rename columns to match expected format
+    roster_with_ml['ml_projection'] = roster_with_ml['pa_projection']
+    roster_with_ml['ml_confidence'] = roster_with_ml['pa_confidence']
+    roster_with_ml['ml_pts_per_pa'] = roster_with_ml['pa_pts_per_pa']
+    roster_with_ml['matchup_type'] = roster_with_ml['pa_matchup_type']
+else:
+    print("Pitcher-aware projections unavailable, falling back to general projections")
+    roster_with_ml = ml_engine.get_roster_projections(
+        roster_df,
+        games_df,
+        team_name_map
+    )
+    roster_with_ml['opponent_pitcher'] = None
+    roster_with_ml['matchup_type'] = 'general'
+
+# === Initialize Prediction Tracker ===
+tracker = PredictionTracker()
 
 # === Build Recommendations ===
 recommendations = []
@@ -131,10 +154,12 @@ for _, player in roster_with_ml.iterrows():
     injury = player["injuryStatus"]
     position = player["position"]
     lineup_slot = player["lineupSlot"]
-    
+
     ml_proj = player.get("ml_projection")
     ml_confidence = player.get("ml_confidence", "none")
     ml_pts_per_pa = player.get("ml_pts_per_pa")
+    opponent_pitcher = player.get("opponent_pitcher")
+    matchup_type = player.get("matchup_type", "general")
     
     # Check if game's already started
     full_team_name = team_name_map.get(team, None)
@@ -177,18 +202,34 @@ for _, player in roster_with_ml.iterrows():
     # ML-based recommendations for active players
     elif injury == "ACTIVE" and plays_today and not game_locked:
         if ml_proj is not None:
+            # Log prediction for tracking
+            tracker.log_prediction(
+                date_str=today_str,
+                player_name=name,
+                projected=ml_proj,
+                confidence=ml_confidence,
+                matchup_type=matchup_type,
+                pitcher=opponent_pitcher,
+                team=team,
+                position=position,
+                was_started=(lineup_slot not in ["BE", "IL"])
+            )
+
             # High projection players should start
             if ml_proj >= 6.0 and lineup_slot == "BE":
-                note = f"Strong matchup"
-                action = f"Consider starting (proj: {ml_proj} pts, {ml_confidence} conf)"
+                matchup_note = f" vs {opponent_pitcher}" if opponent_pitcher else ""
+                note = f"Strong matchup{matchup_note}"
+                action = f"Consider starting (proj: {ml_proj} pts, {ml_confidence} conf, {matchup_type})"
             # Low projection players might sit
             elif ml_proj < 3.0 and lineup_slot not in ["BE", "IL"]:
-                note = f"Weak matchup"
-                action = f"Consider benching (proj: {ml_proj} pts, {ml_confidence} conf)"
+                matchup_note = f" vs {opponent_pitcher}" if opponent_pitcher else ""
+                note = f"Weak matchup{matchup_note}"
+                action = f"Consider benching (proj: {ml_proj} pts, {ml_confidence} conf, {matchup_type})"
             # Good lineup spot
             elif lineup_slot not in ["BE", "IL"]:
-                note = f"Projected: {ml_proj} pts"
-                action = f"Starting ({ml_confidence} confidence)"
+                matchup_note = f" vs {opponent_pitcher}" if opponent_pitcher else ""
+                note = f"Projected: {ml_proj} pts{matchup_note}"
+                action = f"Starting ({ml_confidence} confidence, {matchup_type})"
         else:
             # No ML projection available
             if plays_today and lineup_slot not in ["BE", "IL"]:
@@ -205,9 +246,14 @@ for _, player in roster_with_ml.iterrows():
             "injuryStatus": injury,
             "ml_projection": ml_proj,
             "ml_confidence": ml_confidence,
+            "matchup_type": matchup_type,
+            "opponent_pitcher": opponent_pitcher,
             "note": note,
             "action": action
         })
+
+# Close tracker connection
+tracker.close()
 
 # === Output ===
 rec_df = pd.DataFrame(recommendations)
