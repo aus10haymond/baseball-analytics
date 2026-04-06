@@ -1,0 +1,110 @@
+# shared_config.yaml
+# Central configuration for the baseball_analytics monorepo.
+# All three packages (matchup_machine, fantasy_mlb_ai, diamond_mind) reference
+# these values so thresholds and paths stay consistent across the pipeline.
+
+# ---------------------------------------------------------------------------
+# Package paths (relative to repo root)
+# Override with env vars DM_MATCHUP_MACHINE_PATH / DM_FANTASY_MLB_PATH
+# ---------------------------------------------------------------------------
+paths:
+  matchup_machine: packages/matchup_machine
+  fantasy_mlb_ai: packages/fantasy_mlb_ai
+  diamond_mind: packages/diamond_mind
+
+  # Runtime data
+  matchups_parquet: packages/matchup_machine/data/matchups.parquet
+  pitcher_profiles: packages/matchup_machine/data/pitcher_profiles/pitcher_profiles.parquet
+  xgboost_model: packages/matchup_machine/models/xgb_outcome_model.joblib
+  predictions_db: packages/fantasy_mlb_ai/data/predictions/predictions.db
+  recommendations_dir: packages/fantasy_mlb_ai/data/recs
+
+# ---------------------------------------------------------------------------
+# Model identifiers (must match values in integration modules)
+# ---------------------------------------------------------------------------
+models:
+  xgboost_outcome:
+    name: xgb_outcome_model
+    outcome_labels:
+      - single
+      - double
+      - triple
+      - home_run
+      - walk
+      - strikeout
+      - ball_in_play_out
+      - other
+
+  fantasy_projection:
+    name: fantasy_mlb_projection
+    confidence_thresholds:
+      high: 300      # minimum PA sample for high confidence
+      medium: 150    # minimum PA sample for medium confidence
+
+# ---------------------------------------------------------------------------
+# Fantasy scoring weights
+# ---------------------------------------------------------------------------
+fantasy_scoring:
+  single: 1.0
+  double: 2.0
+  triple: 3.0
+  home_run: 6.0
+  walk: 1.0
+  strikeout: -1.0
+  ball_in_play_out: 0.0
+  other: 1.0
+
+# ---------------------------------------------------------------------------
+# Data quality thresholds (used by DataQualityAgent and integrations)
+# ---------------------------------------------------------------------------
+data_quality:
+  anomaly_threshold_std: 3.0      # z-score cutoff for anomaly flagging
+  contamination_rate: 0.05        # expected fraction of outliers (IsolationForest)
+  min_completeness_score: 0.95    # alert if below this
+  min_consistency_score: 0.90
+
+# ---------------------------------------------------------------------------
+# Model monitoring thresholds (used by ModelMonitorAgent and integrations)
+# ---------------------------------------------------------------------------
+model_monitoring:
+  drift:
+    psi_threshold: 0.20           # PSI > 0.20 → significant drift
+    ks_p_threshold: 0.05          # KS p-value < 0.05 → reject H0 (no drift)
+  performance:
+    min_auc: 0.75                 # alert if AUC drops below this
+    degradation_delta: 0.05       # alert if accuracy drops > 5pp vs. baseline
+    max_avg_prediction_ms: 500    # latency SLA
+  retraining:
+    auto_trigger_on_drift: true
+    auto_trigger_on_degradation: true
+
+# ---------------------------------------------------------------------------
+# Projection accuracy targets (used by fantasy_mlb_ai AccuracyReporter)
+# ---------------------------------------------------------------------------
+accuracy_targets:
+  mae_target: 2.5                 # fantasy points — success metric from plan.md
+  rmse_target: 3.5
+  min_directional_accuracy: 0.55  # better than coin flip
+
+# ---------------------------------------------------------------------------
+# Redis (shared by all diamond_mind agents)
+# Override with DM_REDIS_* env vars
+# ---------------------------------------------------------------------------
+redis:
+  host: localhost
+  port: 6379
+  db: 0
+  queues:
+    tasks: diamond_mind:tasks
+    results: diamond_mind:results
+    alerts: diamond_mind:alerts
+
+# ---------------------------------------------------------------------------
+# Scheduling defaults (used by daily_workflow.py and cron setup)
+# ---------------------------------------------------------------------------
+schedule:
+  daily_workflow_hour: 9          # 9 AM local time
+  daily_workflow_minute: 0
+  drift_check_interval_hours: 24
+  data_quality_interval_hours: 6
+  feature_search_interval_days: 7
