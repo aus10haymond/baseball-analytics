@@ -13,9 +13,12 @@ RESULTS_DIR = PROJECT_ROOT / "results"
 
 # Date ranges
 STATCAST_START = date(2023, 4, 1)
-STATCAST_END   = date(2025, 9, 28)
+STATCAST_END   = date(2026, 4, 5)  # updated 2026-04-06
 
 # Train/val/test cutoffs
+# Train: full 2023 + 2024 seasons
+# Val:   first half of 2025 (early stopping signal)
+# Test:  Aug 2025 onwards (second half 2025 + early 2026 season)
 TRAIN_END = date(2024, 9, 30)
 VAL_START = date(2025, 4, 1)
 VAL_END   = date(2025, 7, 31)

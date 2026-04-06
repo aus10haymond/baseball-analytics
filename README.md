@@ -21,6 +21,7 @@ uv pip install -e packages/matchup_machine -e packages/fantasy_mlb_ai -e package
 ## Development
 
 See individual package READMEs for details:
+
 - [matchup_machine](packages/matchup_machine/README.md)
 - [fantasy_mlb_ai](packages/fantasy_mlb_ai/README.md)
 - [diamond_mind](packages/diamond_mind/README.md)

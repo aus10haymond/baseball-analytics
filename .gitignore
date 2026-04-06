@@ -125,6 +125,7 @@ models/*.onnx
 models/*.h5
 models/*.pth
 models/*.safetensors
+packages/matchup_machine/src/models/*
 
 # Checkpoints
 **/checkpoints/
