@@ -19,6 +19,7 @@ import pandas as pd
 import streamlit as st
 
 from components.espn_connect import espn_connect_ui
+from utils.player_lookup import get_player_info, get_player_names
 from utils.session_state import (
     add_player,
     clear_roster,
@@ -87,33 +88,65 @@ st.divider()
 
 st.subheader("Add a Player")
 
-with st.form("add_player_form", clear_on_submit=True):
-    col1, col2, col3, col4 = st.columns([3, 1.5, 3, 1.5])
+# Initialise autofill state
+if "roster_autofill_position" not in st.session_state:
+    st.session_state.roster_autofill_position = POSITIONS[0]
+if "roster_autofill_team" not in st.session_state:
+    st.session_state.roster_autofill_team = MLB_TEAMS[0]
 
-    with col1:
-        name_input = st.text_input("Player Name", placeholder="e.g. Aaron Judge")
+_all_player_names = get_player_names()
 
-    with col2:
-        position_input = st.selectbox("Position", POSITIONS)
 
-    with col3:
-        team_input = st.selectbox("MLB Team", MLB_TEAMS)
+def _on_player_name_change() -> None:
+    """Autofill position and team when a known player is selected."""
+    selected = st.session_state.get("roster_player_name_select")
+    if selected:
+        info = get_player_info(selected)
+        if info:
+            st.session_state.roster_autofill_position = info["position"]
+            st.session_state.roster_autofill_team = info["team"]
 
-    with col4:
-        st.write("")  # vertical spacing
-        st.write("")
-        submitted = st.form_submit_button("Add Player", use_container_width=True, type="primary")
 
-    if submitted:
-        if not name_input.strip():
-            st.error("Player name is required.")
+col1, col2, col3, col4 = st.columns([3, 1.5, 3, 1.5])
+
+with col1:
+    name_input = st.selectbox(
+        "Player Name",
+        options=[""] + _all_player_names,
+        index=0,
+        key="roster_player_name_select",
+        on_change=_on_player_name_change,
+        placeholder="Type to search…",
+    )
+
+_pos_index = POSITIONS.index(st.session_state.roster_autofill_position) if st.session_state.roster_autofill_position in POSITIONS else 0
+_team_index = MLB_TEAMS.index(st.session_state.roster_autofill_team) if st.session_state.roster_autofill_team in MLB_TEAMS else 0
+
+with col2:
+    position_input = st.selectbox("Position", POSITIONS, index=_pos_index, key="roster_position_select")
+
+with col3:
+    team_input = st.selectbox("MLB Team", MLB_TEAMS, index=_team_index, key="roster_team_select")
+
+with col4:
+    st.write("")  # vertical spacing
+    st.write("")
+    add_clicked = st.button("Add Player", use_container_width=True, type="primary")
+
+if add_clicked:
+    chosen_name = name_input.strip() if name_input else ""
+    if not chosen_name:
+        st.error("Select a player name from the dropdown.")
+    else:
+        success = add_player(chosen_name, position_input, team_input)
+        if success:
+            st.success(f"Added {chosen_name} ({position_input})")
+            # Reset autofill state for next entry
+            st.session_state.roster_autofill_position = POSITIONS[0]
+            st.session_state.roster_autofill_team = MLB_TEAMS[0]
+            st.rerun()
         else:
-            success = add_player(name_input, position_input, team_input)
-            if success:
-                st.success(f"Added {name_input.strip()} ({position_input})")
-                st.rerun()
-            else:
-                st.warning(f"{name_input.strip()} is already on your roster.")
+            st.warning(f"{chosen_name} is already on your roster.")
 
 # ---------------------------------------------------------------------------
 # Current roster table
