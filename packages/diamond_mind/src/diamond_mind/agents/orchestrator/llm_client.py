@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import httpx
 
@@ -35,6 +35,7 @@ class LLMError(Exception):
 _OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 _ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 _ANTHROPIC_VERSION = "2023-06-01"
+_HF_URL = "https://api-inference.huggingface.co/v1/chat/completions"
 
 
 def _build_openai_request(
@@ -107,7 +108,7 @@ class _RateLimiter:
 
 class LLMClient:
     """
-    Async LLM client supporting OpenAI and Anthropic via raw HTTP.
+    Async LLM client supporting OpenAI, Anthropic, HuggingFace, and Ollama via raw HTTP.
 
     Usage::
 
@@ -119,65 +120,104 @@ class LLMClient:
         self,
         provider: str,
         model: str,
-        api_key: str,
+        api_key: str = "",
         temperature: float = 0.7,
         max_tokens: int = 500,
         max_retries: int = 3,
         min_interval_seconds: float = 0.5,
+        base_url: Optional[str] = None,
+        fallback: Optional["LLMClient"] = None,
     ):
-        if not api_key:
+        provider = provider.lower()
+        if not api_key and provider not in ("ollama",):
             raise LLMConfigError(
                 f"No API key provided for LLM provider {provider!r}. "
                 "Set DM_LLM_API_KEY in your environment."
             )
-        self.provider = provider.lower()
+        self.provider = provider
         self.model = model
         self.api_key = api_key
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.max_retries = max_retries
+        self.base_url = base_url
+        self.fallback = fallback
         self._rate_limiter = _RateLimiter(min_interval_seconds)
 
     @classmethod
     def from_settings(cls, settings) -> "LLMClient":
-        """Create an LLMClient from the shared settings object."""
+        """Create an LLMClient (with optional fallback) from the shared settings object."""
+        fallback = None
+        if settings.llm_fallback_provider:
+            fallback_base_url = settings.llm_fallback_base_url or "http://localhost:11434"
+            fallback = cls(
+                provider=settings.llm_fallback_provider,
+                model=settings.llm_fallback_model or "",
+                temperature=settings.llm_temperature,
+                max_tokens=settings.llm_max_tokens,
+                base_url=fallback_base_url,
+            )
         return cls(
             provider=settings.llm_provider,
             model=settings.llm_model,
             api_key=settings.llm_api_key or "",
             temperature=settings.llm_temperature,
             max_tokens=settings.llm_max_tokens,
+            fallback=fallback,
         )
 
     async def call(self, prompt: str, system_prompt: str = "") -> str:
         """
         Send ``prompt`` to the configured LLM and return the text response.
 
-        Retries on transient errors (5xx, network errors) with exponential
-        backoff.  Raises ``LLMRateLimitError`` after exhausting retries on 429.
+        Retries on transient errors (5xx, network errors) with exponential backoff.
+        If all retries fail and a fallback client is configured, delegates to it.
         """
+        last_error: Exception = LLMError("No attempts made")
         for attempt in range(self.max_retries + 1):
             try:
                 await self._rate_limiter.acquire()
                 return await self._dispatch(prompt, system_prompt)
-            except LLMRateLimitError:
+            except (LLMRateLimitError, LLMError) as exc:
+                last_error = exc
                 if attempt == self.max_retries:
-                    raise
-                backoff = 2 ** attempt
-                await asyncio.sleep(backoff)
-            except LLMError:
-                if attempt == self.max_retries:
-                    raise
-                backoff = 2 ** attempt
-                await asyncio.sleep(backoff)
-        raise LLMError("Unreachable")  # pragma: no cover
+                    break
+                await asyncio.sleep(2 ** attempt)
+
+        if self.fallback is not None:
+            return await self.fallback.call(prompt, system_prompt)
+        raise last_error
 
     async def _dispatch(self, prompt: str, system_prompt: str) -> str:
         if self.provider == "openai":
-            return await self._call_openai(prompt, system_prompt)
+            return await self._call_openai_compat(
+                _OPENAI_URL, f"Bearer {self.api_key}", prompt, system_prompt
+            )
         if self.provider == "anthropic":
             return await self._call_anthropic(prompt, system_prompt)
-        raise LLMConfigError(f"Unknown LLM provider: {self.provider!r}. Use 'openai' or 'anthropic'.")
+        if self.provider == "huggingface":
+            return await self._call_openai_compat(
+                _HF_URL, f"Bearer {self.api_key}", prompt, system_prompt
+            )
+        if self.provider == "ollama":
+            base = (self.base_url or "http://localhost:11434").rstrip("/")
+            url = f"{base}/v1/chat/completions"
+            return await self._call_openai_compat(url, "", prompt, system_prompt)
+        raise LLMConfigError(
+            f"Unknown LLM provider: {self.provider!r}. "
+            "Use 'openai', 'anthropic', 'huggingface', or 'ollama'."
+        )
+
+    async def _call_openai_compat(
+        self, url: str, auth_header: str, prompt: str, system_prompt: str
+    ) -> str:
+        payload = _build_openai_request(
+            self.model, system_prompt, prompt, self.temperature, self.max_tokens
+        )
+        headers: Dict[str, str] = {"Content-Type": "application/json"}
+        if auth_header:
+            headers["Authorization"] = auth_header
+        return await self._post(url, headers, payload, _parse_openai_response)
 
     async def _call_openai(self, prompt: str, system_prompt: str) -> str:
         payload = _build_openai_request(

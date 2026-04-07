@@ -77,11 +77,16 @@ class Settings(BaseSettings):
     explainer_use_llm: bool = Field(default=True, description="Use LLM for narrative generation")
     
     # LLM configuration (for orchestrator and explainer)
-    llm_provider: str = Field(default="openai", description="LLM provider (openai, anthropic, etc.)")
+    llm_provider: str = Field(default="openai", description="LLM provider (openai, anthropic, huggingface, ollama)")
     llm_model: str = Field(default="gpt-4", description="LLM model name")
     llm_api_key: Optional[str] = Field(default=None, description="LLM API key")
     llm_temperature: float = Field(default=0.7, description="LLM temperature")
     llm_max_tokens: int = Field(default=500, description="Max tokens for LLM responses")
+
+    # Fallback LLM (used if primary provider fails)
+    llm_fallback_provider: Optional[str] = Field(default=None, description="Fallback LLM provider")
+    llm_fallback_model: Optional[str] = Field(default=None, description="Fallback LLM model name")
+    llm_fallback_base_url: Optional[str] = Field(default="http://localhost:11434", description="Fallback provider base URL (for Ollama)")
     
     # Logging
     log_level: str = Field(default="INFO", description="Logging level")
