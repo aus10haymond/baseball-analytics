@@ -15,11 +15,13 @@ _DASHBOARD_DIR = Path(__file__).parent.parent
 if str(_DASHBOARD_DIR) not in sys.path:
     sys.path.insert(0, str(_DASHBOARD_DIR))
 
+import random
+
 import pandas as pd
 import streamlit as st
 
 from components.espn_connect import espn_connect_ui
-from utils.player_lookup import get_player_info, get_player_names
+from utils.player_lookup import PLAYER_DATA, get_player_info, get_player_names
 from utils.session_state import (
     add_player,
     clear_roster,
@@ -48,21 +50,65 @@ MLB_TEAMS = [
     "Texas Rangers", "Toronto Blue Jays", "Washington Nationals",
 ]
 
-SAMPLE_ROSTER = [
-    {"name": "Aaron Judge", "position": "OF", "team": "New York Yankees"},
-    {"name": "Freddie Freeman", "position": "1B", "team": "Los Angeles Dodgers"},
-    {"name": "Jose Ramirez", "position": "3B", "team": "Cleveland Guardians"},
-    {"name": "Bobby Witt Jr.", "position": "SS", "team": "Kansas City Royals"},
-    {"name": "William Contreras", "position": "C", "team": "Milwaukee Brewers"},
-    {"name": "Matt McLain", "position": "2B", "team": "Cincinnati Reds"},
-    {"name": "Yordan Alvarez", "position": "OF", "team": "Houston Astros"},
-    {"name": "Adolis Garcia", "position": "OF", "team": "Texas Rangers"},
-    {"name": "Kyle Tucker", "position": "OF", "team": "Houston Astros"},
-    {"name": "Shohei Ohtani", "position": "DH", "team": "Los Angeles Dodgers"},
-    {"name": "Zack Wheeler", "position": "SP", "team": "Philadelphia Phillies"},
-    {"name": "Gerrit Cole", "position": "SP", "team": "New York Yankees"},
-    {"name": "Emmanuel Clase", "position": "RP", "team": "Cleveland Guardians"},
-]
+def _generate_sample_roster() -> list[dict]:
+    """
+    Build a randomised 19-player fantasy roster following the recommended layout:
+      1 C · 1 1B · 1 2B · 1 3B · 1 SS · 4 OF · 2 UTIL · 5 SP · 3 RP
+    UTIL slots are filled from any unused hitter (DH or leftover position player).
+    """
+    # Group lookup names by position
+    by_pos: dict[str, list[str]] = {}
+    for name, info in PLAYER_DATA.items():
+        by_pos.setdefault(info["position"], []).append(name)
+
+    used: set[str] = set()
+    roster: list[dict] = []
+
+    def _pick(pos: str, slot: str) -> dict | None:
+        """Pick a random unused player from *pos* and label them as *slot*."""
+        candidates = [n for n in by_pos.get(pos, []) if n not in used]
+        if not candidates:
+            return None
+        name = random.choice(candidates)
+        used.add(name)
+        return {"name": name, "position": slot, "team": PLAYER_DATA[name]["team"]}
+
+    # Core lineup slots
+    for pos in ("C", "1B", "2B", "3B", "SS"):
+        player = _pick(pos, pos)
+        if player:
+            roster.append(player)
+
+    # 4 outfielders
+    for _ in range(4):
+        player = _pick("OF", "OF")
+        if player:
+            roster.append(player)
+
+    # 2 UTIL — draw from DH first, then any remaining position player
+    util_positions = ["DH", "C", "1B", "2B", "3B", "SS", "OF"]
+    util_filled = 0
+    for pos in util_positions:
+        if util_filled >= 2:
+            break
+        player = _pick(pos, "UTIL")
+        if player:
+            roster.append(player)
+            util_filled += 1
+
+    # 5 starting pitchers
+    for _ in range(5):
+        player = _pick("SP", "SP")
+        if player:
+            roster.append(player)
+
+    # 3 relief pitchers
+    for _ in range(3):
+        player = _pick("RP", "RP")
+        if player:
+            roster.append(player)
+
+    return roster
 
 # ---------------------------------------------------------------------------
 # Page setup
@@ -198,7 +244,7 @@ col_sample, col_clear, col_spacer = st.columns([2, 2, 4])
 
 with col_sample:
     if st.button("Load Sample Roster", use_container_width=True):
-        set_roster(SAMPLE_ROSTER)
+        set_roster(_generate_sample_roster())
         st.success("Sample roster loaded!")
         st.rerun()
 
