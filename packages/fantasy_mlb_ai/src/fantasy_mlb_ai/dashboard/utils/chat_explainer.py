@@ -26,8 +26,9 @@ import streamlit as st
 
 _DIAMOND_MIND_SRC = None
 for _candidate in [
-    Path(__file__).parents[7] / "diamond_mind" / "src",
+    Path(__file__).parents[5] / "diamond_mind" / "src",   # packages/diamond_mind/src
     Path(__file__).parents[6] / "diamond_mind" / "src",
+    Path(__file__).parents[7] / "diamond_mind" / "src",
 ]:
     if _candidate.exists():
         _DIAMOND_MIND_SRC = _candidate
