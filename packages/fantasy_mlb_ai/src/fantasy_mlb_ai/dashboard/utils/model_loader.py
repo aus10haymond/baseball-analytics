@@ -27,12 +27,14 @@ import streamlit as st
 def _find_local_matchup_machine() -> Optional[Path]:
     """
     Walk up from this file to find the matchup_machine source tree.
-    Returns the src/ path if found, else None.
+    Returns the inner package path (src/matchup_machine/) where
+    fantasy_inference.py lives directly, so it can be imported as
+    `from fantasy_inference import ...`.
     """
     candidates = [
-        # Monorepo layout: packages/matchup_machine/src
-        Path(__file__).parents[6] / "matchup_machine" / "src",
-        Path(__file__).parents[5] / "matchup_machine" / "src",
+        # Monorepo layout: packages/matchup_machine/src/matchup_machine
+        Path(__file__).parents[5] / "matchup_machine" / "src" / "matchup_machine",
+        Path(__file__).parents[6] / "matchup_machine" / "src" / "matchup_machine",
         # Env-var override
         Path(os.getenv("MATCHUP_MACHINE_PATH", "__none__")),
     ]
@@ -108,41 +110,44 @@ def load_artifacts() -> Optional[Tuple[Any, ...]]:
     Tuple: (model, feature_cols, pitcher_profiles, batter_profiles,
              player_index, pa_proj, matchups)
     """
-    # Resolve matchup_machine source
+    # Step 1: Always add matchup_machine source to sys.path so
+    # fantasy_inference.py (source code) is importable. This is needed
+    # on Streamlit Cloud even when artifacts come from HF Hub.
     mm_src = _find_local_matchup_machine()
     if mm_src and str(mm_src) not in sys.path:
         sys.path.insert(0, str(mm_src))
 
-    # Try importing load_artifacts from matchup_machine
-    try:
-        from fantasy_inference import load_artifacts as _load  # type: ignore
-        artifacts = _load()
-        return artifacts
-    except ImportError:
-        pass  # matchup_machine not on path — try HF Hub path below
-    except Exception as exc:
-        st.warning(f"Failed to load local artifacts: {exc}")
-        return None
+    # Step 2: Try local model file (dev environment)
+    local_model = _find_local_model()
+    if local_model:
+        try:
+            from fantasy_inference import load_artifacts as _load  # type: ignore
+            return _load()
+        except Exception as exc:
+            st.warning(f"Failed to load local artifacts: {exc}")
+            return None
 
-    # Try HF Hub
+    # Step 3: Download artifacts from HF Hub (Streamlit Cloud / production)
+    # fantasy_inference.py source is in the monorepo (Step 1 above);
+    # the heavy data files (.joblib, .parquet) live in HF Hub.
     hf_token = _get_secret("HF_TOKEN")
     hf_repo = _get_secret("HF_MODEL_REPO")
 
     if not hf_token or not hf_repo:
-        return None  # No remote source configured
+        return None
+
+    if mm_src is None:
+        st.warning("matchup_machine source not found — cannot load artifacts.")
+        return None
 
     artifact_dir = _download_from_hub(hf_repo, hf_token)
     if artifact_dir is None:
         return None
 
-    # Point matchup_machine at the downloaded artifacts via env vars so
-    # load_artifacts() picks them up.
-    os.environ.setdefault("MM_MODEL_PATH", str(artifact_dir / "xgb_outcome_model.joblib"))
-    os.environ.setdefault("MM_MATCHUPS_PATH", str(artifact_dir / "matchups.parquet"))
-    os.environ.setdefault("MM_PLAYER_INDEX_PATH", str(artifact_dir / "player_index.csv"))
-
-    if str(artifact_dir) not in sys.path:
-        sys.path.insert(0, str(artifact_dir))
+    # Point fantasy_inference at the downloaded artifact files via env vars.
+    os.environ["MM_MODEL_PATH"] = str(artifact_dir / "xgb_outcome_model.joblib")
+    os.environ["MM_MATCHUPS_PATH"] = str(artifact_dir / "matchups.parquet")
+    os.environ["MM_PLAYER_INDEX_PATH"] = str(artifact_dir / "player_index.csv")
 
     try:
         from fantasy_inference import load_artifacts as _load  # type: ignore
