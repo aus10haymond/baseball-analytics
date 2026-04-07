@@ -26,9 +26,9 @@ import streamlit as st
 
 _DIAMOND_MIND_SRC = None
 for _candidate in [
-    Path(__file__).parents[5] / "diamond_mind" / "src" / "diamond_mind",  # packages/diamond_mind/src/diamond_mind
-    Path(__file__).parents[6] / "diamond_mind" / "src" / "diamond_mind",
-    Path(__file__).parents[7] / "diamond_mind" / "src" / "diamond_mind",
+    Path(__file__).parents[5] / "diamond_mind" / "src",  # packages/diamond_mind/src
+    Path(__file__).parents[6] / "diamond_mind" / "src",
+    Path(__file__).parents[7] / "diamond_mind" / "src",
 ]:
     if _candidate.exists():
         _DIAMOND_MIND_SRC = _candidate
@@ -38,7 +38,7 @@ if _DIAMOND_MIND_SRC and str(_DIAMOND_MIND_SRC) not in sys.path:
     sys.path.insert(0, str(_DIAMOND_MIND_SRC))
 
 try:
-    from agents.orchestrator.llm_client import LLMClient, LLMConfigError, LLMError  # type: ignore
+    from diamond_mind.agents.orchestrator.llm_client import LLMClient, LLMConfigError, LLMError  # type: ignore
     _LLM_CLIENT_AVAILABLE = True
 except ImportError:
     _LLM_CLIENT_AVAILABLE = False

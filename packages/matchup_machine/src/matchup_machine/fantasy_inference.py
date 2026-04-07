@@ -36,9 +36,13 @@ def load_artifacts() -> Tuple[
     Paths are resolved at call time (not import time) so that
     MM_ARTIFACTS_DIR env var set by the dashboard takes effect.
     """
-    # Re-import config at call time so env var overrides are picked up
+    # Reload config so MM_ARTIFACTS_DIR env var is picked up if set
+    # (env var may be set after the module was first imported)
     import importlib
-    importlib.reload(config)
+    import matchup_machine.config as _config_module
+    importlib.reload(_config_module)
+    # Refresh the local reference so path constants below use the reloaded values
+    from matchup_machine import config as config  # noqa: F811
 
     model_path = config.MODELS_DIR / "xgb_outcome_model.joblib"
     features_path = config.MODELS_DIR / "outcome_feature_cols.json"

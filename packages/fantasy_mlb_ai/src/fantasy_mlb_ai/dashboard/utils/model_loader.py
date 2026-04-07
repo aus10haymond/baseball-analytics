@@ -32,9 +32,9 @@ def _find_local_matchup_machine() -> Optional[Path]:
     `from fantasy_inference import ...`.
     """
     candidates = [
-        # Monorepo layout: packages/matchup_machine/src/matchup_machine
-        Path(__file__).parents[5] / "matchup_machine" / "src" / "matchup_machine",
-        Path(__file__).parents[6] / "matchup_machine" / "src" / "matchup_machine",
+        # Monorepo layout: packages/matchup_machine/src
+        Path(__file__).parents[5] / "matchup_machine" / "src",
+        Path(__file__).parents[6] / "matchup_machine" / "src",
         # Env-var override
         Path(os.getenv("MATCHUP_MACHINE_PATH", "__none__")),
     ]
@@ -121,7 +121,7 @@ def load_artifacts() -> Optional[Tuple[Any, ...]]:
     local_model = _find_local_model()
     if local_model:
         try:
-            from fantasy_inference import load_artifacts as _load  # type: ignore
+            from matchup_machine.fantasy_inference import load_artifacts as _load  # type: ignore
             return _load()
         except Exception as exc:
             st.warning(f"Failed to load local artifacts: {exc}")
@@ -149,7 +149,7 @@ def load_artifacts() -> Optional[Tuple[Any, ...]]:
     os.environ["MM_ARTIFACTS_DIR"] = str(artifact_dir)
 
     try:
-        from fantasy_inference import load_artifacts as _load  # type: ignore
+        from matchup_machine.fantasy_inference import load_artifacts as _load  # type: ignore
         return _load()
     except Exception as exc:
         st.warning(f"Failed to load Hub artifacts: {exc}")
