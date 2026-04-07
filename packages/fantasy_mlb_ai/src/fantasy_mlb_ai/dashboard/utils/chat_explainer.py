@@ -217,13 +217,14 @@ class ChatExplainer:
 
         system_prompt = _build_system_prompt(roster, projections)
 
-        # Build the prompt including conversation history
-        history_text = ""
+        # Build the prompt with XML-delimited turns to prevent prompt injection
+        history_text = "<conversation_history>\n"
         for msg in history[-8:]:  # last 8 turns to stay within token budget
-            role_label = "User" if msg["role"] == "user" else "Assistant"
-            history_text += f"{role_label}: {msg['content']}\n"
+            tag = "user_turn" if msg["role"] == "user" else "assistant_turn"
+            history_text += f"<{tag}>{msg['content']}</{tag}>\n"
+        history_text += "</conversation_history>\n\n"
 
-        full_prompt = f"{history_text}User: {user_message}\nAssistant:"
+        full_prompt = f"{history_text}<current_user_message>{user_message}</current_user_message>"
 
         try:
             reply = _run_async(

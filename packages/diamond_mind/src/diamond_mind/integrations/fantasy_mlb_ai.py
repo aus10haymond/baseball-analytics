@@ -184,6 +184,8 @@ class FantasyMLBAIIntegration:
         Writes temporary CSV snapshots of prediction data and submits a
         ``check_drift`` task so the monitor can compute PSI/KS statistics.
         """
+        import atexit
+        import shutil
         import tempfile
         import pandas as pd
 
@@ -194,7 +196,10 @@ class FantasyMLBAIIntegration:
             logger.warning("Could not load prediction snapshots; skipping drift check")
             return ""
 
-        tmp = Path(tempfile.mkdtemp())
+        tmp = Path(tempfile.mkdtemp(prefix="dm_drift_"))
+        # Register cleanup so the temp dir is removed when the process exits,
+        # regardless of what happens after the task is submitted.
+        atexit.register(shutil.rmtree, tmp, ignore_errors=True)
         baseline_path = str(tmp / "baseline_projections.csv")
         current_path = str(tmp / "current_projections.csv")
         baseline_df.to_csv(baseline_path, index=False)
@@ -409,24 +414,31 @@ class FantasyMLBAIIntegration:
 
             conn = sqlite3.connect(str(db_path))
 
-            baseline_clause = (
-                f"AND date = '{baseline_date}'"
-                if baseline_date
-                else "AND date <= date('now', '-30 days')"
-            )
-            current_clause = (
-                f"AND date = '{current_date}'"
-                if current_date
-                else "AND date >= date('now', '-7 days')"
-            )
-
             cols = "projected_points, confidence"
-            baseline_df = pd.read_sql_query(
-                f"SELECT {cols} FROM predictions WHERE 1=1 {baseline_clause}", conn
-            )
-            current_df = pd.read_sql_query(
-                f"SELECT {cols} FROM predictions WHERE 1=1 {current_clause}", conn
-            )
+            if baseline_date:
+                baseline_df = pd.read_sql_query(
+                    f"SELECT {cols} FROM predictions WHERE date = ?",
+                    conn,
+                    params=[baseline_date],
+                )
+            else:
+                baseline_df = pd.read_sql_query(
+                    f"SELECT {cols} FROM predictions WHERE date <= date('now', '-30 days')",
+                    conn,
+                )
+
+            if current_date:
+                current_df = pd.read_sql_query(
+                    f"SELECT {cols} FROM predictions WHERE date = ?",
+                    conn,
+                    params=[current_date],
+                )
+            else:
+                current_df = pd.read_sql_query(
+                    f"SELECT {cols} FROM predictions WHERE date >= date('now', '-7 days')",
+                    conn,
+                )
+
             conn.close()
 
             if baseline_df.empty or current_df.empty:

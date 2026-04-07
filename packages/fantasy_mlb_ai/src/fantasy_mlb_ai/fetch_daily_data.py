@@ -23,7 +23,7 @@ def fetch_today_games():
 
     print(f"Fetching MLB games for {today} from MLB Stats API...")
 
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
     data = response.json()
 
     games = []

@@ -1,3 +1,4 @@
+import ast
 import pandas as pd
 import requests
 from datetime import datetime, date, timezone, timedelta
@@ -85,7 +86,7 @@ for _, player in roster_df.iterrows():
     name = player["name"]
     team = player["proTeam"]
     injury = player["injuryStatus"]
-    eligible = eval(player["eligibleSlots"])
+    eligible = ast.literal_eval(player["eligibleSlots"])
     position = player["position"]
     lineup_slot = player["lineupSlot"]
 
