@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Dict, Tuple, Optional
 
@@ -90,18 +91,27 @@ def _normalize(s: str) -> str:
     return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode("ascii").lower()
 
 
+_NAME_SUFFIXES = re.compile(r"\s+(jr\.?|sr\.?|ii|iii|iv)$", re.IGNORECASE)
+
+
 def find_player_id(player_index: pd.DataFrame, name_query: str) -> int:
     """
     Fuzzy lookup: find a player ID whose name contains the query (case-insensitive).
-    Normalizes unicode (e.g. José → Jose) so accent-free input still matches.
-    Ignores "Unknown ######" rows so only real-named players are considered.
+    - Normalizes unicode (José → Jose) so accent-free input matches accented names.
+    - Strips common suffixes (Jr, Sr, II) that may be absent from the index.
+    - Ignores "Unknown ######" rows.
     """
     known = player_index[~player_index["player_name"].astype(str).str.startswith("Unknown")].copy()
-
-    normalized_query = _normalize(name_query)
     known["_norm"] = known["player_name"].astype(str).apply(_normalize)
 
-    matches = known[known["_norm"].str.contains(normalized_query, na=False)]
+    # Try progressively looser queries: full name, then without suffix
+    normalized_query = _normalize(name_query)
+    stripped_query = _NAME_SUFFIXES.sub("", normalized_query).strip()
+
+    for query in dict.fromkeys([normalized_query, stripped_query]):  # dedup, preserve order
+        matches = known[known["_norm"].str.contains(re.escape(query), na=False)]
+        if not matches.empty:
+            break
 
     if matches.empty:
         raise ValueError(f"No player found matching {name_query!r}")
