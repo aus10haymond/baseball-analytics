@@ -15,18 +15,6 @@ from .build_dataset import OUTCOME_LABELS
 from .train_hit_model import fill_missing_values  # reuse your imputer
 
 
-# Paths to model + metadata
-MODEL_PATH = config.MODELS_DIR / "xgb_outcome_model.joblib"
-FEATURES_PATH = config.MODELS_DIR / "outcome_feature_cols.json"
-
-# Data artifacts
-PITCHER_PROFILES_PATH = config.PITCHER_PROFILES_DIR / "pitcher_profiles.parquet"
-BATTER_PROFILES_PATH = config.DATA_DIR / "batter_profiles.parquet"  # optional
-PLAYER_INDEX_PATH = config.DATA_DIR / "player_index.csv"
-PA_PROJ_PATH = config.DATA_DIR / "batter_pa_projection_2026.parquet"
-MATCHUPS_PATH = config.MODELING_DIR / "matchups.parquet"
-
-
 def load_artifacts() -> Tuple[
     object,          # model
     list[str],       # feature_cols
@@ -44,36 +32,50 @@ def load_artifacts() -> Tuple[
       - player index
       - projected PA for 2026
       - matchups.parquet (full PA-level dataset)
+
+    Paths are resolved at call time (not import time) so that
+    MM_ARTIFACTS_DIR env var set by the dashboard takes effect.
     """
+    # Re-import config at call time so env var overrides are picked up
+    import importlib
+    importlib.reload(config)
 
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
-    if not FEATURES_PATH.exists():
-        raise FileNotFoundError(f"Feature cols JSON not found at {FEATURES_PATH}")
-    if not PITCHER_PROFILES_PATH.exists():
-        raise FileNotFoundError(f"Pitcher profiles not found at {PITCHER_PROFILES_PATH}")
-    if not PLAYER_INDEX_PATH.exists():
-        raise FileNotFoundError(f"Player index CSV not found at {PLAYER_INDEX_PATH}")
-    if not PA_PROJ_PATH.exists():
-        raise FileNotFoundError(f"PA projection parquet not found at {PA_PROJ_PATH}")
-    if not MATCHUPS_PATH.exists():
-        raise FileNotFoundError(f"matchups.parquet not found at {MATCHUPS_PATH}")
+    model_path = config.MODELS_DIR / "xgb_outcome_model.joblib"
+    features_path = config.MODELS_DIR / "outcome_feature_cols.json"
+    pitcher_profiles_path = config.PITCHER_PROFILES_DIR / "pitcher_profiles.parquet"
+    batter_profiles_path = config.DATA_DIR / "batter_profiles.parquet"
+    player_index_path = config.DATA_DIR / "player_index.csv"
+    pa_proj_path = config.DATA_DIR / "batter_pa_projection_2026.parquet"
+    matchups_path = config.MODELING_DIR / "matchups.parquet"
 
-    model = joblib.load(MODEL_PATH)
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model not found at {model_path}")
+    if not features_path.exists():
+        raise FileNotFoundError(f"Feature cols JSON not found at {features_path}")
+    if not pitcher_profiles_path.exists():
+        raise FileNotFoundError(f"Pitcher profiles not found at {pitcher_profiles_path}")
+    if not player_index_path.exists():
+        raise FileNotFoundError(f"Player index CSV not found at {player_index_path}")
+    if not pa_proj_path.exists():
+        raise FileNotFoundError(f"PA projection parquet not found at {pa_proj_path}")
+    if not matchups_path.exists():
+        raise FileNotFoundError(f"matchups.parquet not found at {matchups_path}")
 
-    with open(FEATURES_PATH, "r") as f:
+    model = joblib.load(model_path)
+
+    with open(features_path, "r") as f:
         feature_cols = json.load(f)
 
-    pitcher_profiles = pd.read_parquet(PITCHER_PROFILES_PATH)
+    pitcher_profiles = pd.read_parquet(pitcher_profiles_path)
 
-    if BATTER_PROFILES_PATH.exists():
-        batter_profiles: Optional[pd.DataFrame] = pd.read_parquet(BATTER_PROFILES_PATH)
+    if batter_profiles_path.exists():
+        batter_profiles: Optional[pd.DataFrame] = pd.read_parquet(batter_profiles_path)
     else:
         batter_profiles = None
 
-    player_index = pd.read_csv(PLAYER_INDEX_PATH)
-    pa_proj = pd.read_parquet(PA_PROJ_PATH)
-    matchups = pd.read_parquet(MATCHUPS_PATH)
+    player_index = pd.read_csv(player_index_path)
+    pa_proj = pd.read_parquet(pa_proj_path)
+    matchups = pd.read_parquet(matchups_path)
 
     return model, feature_cols, pitcher_profiles, batter_profiles, player_index, pa_proj, matchups
 

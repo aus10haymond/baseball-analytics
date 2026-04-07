@@ -144,10 +144,9 @@ def load_artifacts() -> Optional[Tuple[Any, ...]]:
     if artifact_dir is None:
         return None
 
-    # Point fantasy_inference at the downloaded artifact files via env vars.
-    os.environ["MM_MODEL_PATH"] = str(artifact_dir / "xgb_outcome_model.joblib")
-    os.environ["MM_MATCHUPS_PATH"] = str(artifact_dir / "matchups.parquet")
-    os.environ["MM_PLAYER_INDEX_PATH"] = str(artifact_dir / "player_index.csv")
+    # Point matchup_machine config at the downloaded artifact directory.
+    # config.py reads MM_ARTIFACTS_DIR and overrides all path constants.
+    os.environ["MM_ARTIFACTS_DIR"] = str(artifact_dir)
 
     try:
         from fantasy_inference import load_artifacts as _load  # type: ignore

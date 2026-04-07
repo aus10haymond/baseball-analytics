@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from datetime import date
 
@@ -10,6 +11,17 @@ MODELING_DIR = DATA_DIR / "modeling"
 PITCHER_PROFILES_DIR = DATA_DIR / "pitcher_profiles"
 MODELS_DIR = PROJECT_ROOT / "models"
 RESULTS_DIR = PROJECT_ROOT / "results"
+
+# Allow env vars to override artifact locations (used by Streamlit Cloud
+# when artifacts are downloaded from HuggingFace Hub at runtime).
+# Set MM_ARTIFACTS_DIR to a directory containing all artifact files flat.
+_artifacts_dir = os.getenv("MM_ARTIFACTS_DIR")
+if _artifacts_dir:
+    _a = Path(_artifacts_dir)
+    MODELS_DIR = _a
+    DATA_DIR = _a
+    MODELING_DIR = _a
+    PITCHER_PROFILES_DIR = _a
 
 # Date ranges
 STATCAST_START = date(2023, 4, 1)
