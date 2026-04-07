@@ -80,7 +80,7 @@ explainer = get_explainer()
 if not explainer.available:
     st.error(
         f"The AI assistant is not available: **{explainer.error_message}**\n\n"
-        "Add `DM_LLM_API_KEY` and `DM_LLM_PROVIDER` (`openai` or `anthropic`) "
+        "Add `DM_LLM_API_KEY` and `DM_LLM_PROVIDER` (`huggingface`, `openai`, or `anthropic`) "
         "to your Streamlit secrets to enable the chatbot.",
         icon="🔑",
     )
@@ -89,9 +89,9 @@ if not explainer.available:
     st.code(
         """
 # In Streamlit Cloud → Settings → Secrets:
-DM_LLM_PROVIDER = "anthropic"       # or "openai"
-DM_LLM_API_KEY  = "sk-ant-..."      # your API key
-DM_LLM_MODEL    = "claude-haiku-4-5-20251001"  # optional, defaults set per provider
+DM_LLM_PROVIDER = "huggingface"           # or "openai" / "anthropic"
+DM_LLM_API_KEY  = "hf_..."               # your HuggingFace token
+DM_LLM_MODEL    = "google/gemma-3-12b-it" # optional, defaults set per provider
         """,
         language="toml",
     )

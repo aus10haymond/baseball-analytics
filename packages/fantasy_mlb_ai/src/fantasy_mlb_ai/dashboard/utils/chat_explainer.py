@@ -151,9 +151,13 @@ class ChatExplainer:
 
         provider = _get_secret("DM_LLM_PROVIDER") or "openai"
         api_key = _get_secret("DM_LLM_API_KEY")
-        model = _get_secret("DM_LLM_MODEL") or (
-            "claude-sonnet-4-6" if provider == "anthropic" else "gpt-4o-mini"
-        )
+        _default_models = {
+            "anthropic": "claude-sonnet-4-6",
+            "huggingface": "google/gemma-3-12b-it",
+            "ollama": "gemma3:4b",
+            "openai": "gpt-4o-mini",
+        }
+        model = _get_secret("DM_LLM_MODEL") or _default_models.get(provider, "gpt-4o-mini")
 
         if not api_key:
             self._error = (
