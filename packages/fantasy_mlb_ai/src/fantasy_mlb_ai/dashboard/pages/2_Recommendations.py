@@ -244,13 +244,21 @@ def _run_projections(roster: List[Dict], matchups: Dict[str, Dict]) -> List[Dict
             expected_points = round(ev_per_pa * 4, 2)
 
             sample_size = len(batter_pas)
-            if matchup_type == "head_to_head" and h2h_sample >= 20:
+            if matchup_type == "head_to_head" and h2h_sample >= 10:
                 confidence = "very_high"
-            elif matchup_type == "head_to_head" and h2h_sample >= 10:
+            elif matchup_type == "head_to_head" and h2h_sample >= 5:
                 confidence = "high"
+            elif matchup_type == "head_to_head":
+                # any H2H data is more informative than a profile alone
+                confidence = "medium"
             elif matchup_type == "pitcher_profile" and sample_size >= 300:
                 confidence = "high"
             elif matchup_type == "pitcher_profile" and sample_size >= 150:
+                confidence = "medium"
+            elif matchup_type == "pitcher_profile":
+                confidence = "low"
+            elif sample_size >= 300:
+                # lots of general batter history, no pitcher context
                 confidence = "medium"
             elif sample_size >= 100:
                 confidence = "low"
@@ -561,9 +569,9 @@ st.download_button(
 
 st.caption(
     "Confidence legend: "
-    "**Very High** = 20+ head-to-head PAs · "
-    "**High** = 10+ H2H or 300+ general PAs · "
-    "**Medium** = 150+ PAs · "
-    "**Low** = <150 PAs · "
-    "**Very Low** = minimal history"
+    "**Very High** = 10+ head-to-head PAs vs today's pitcher · "
+    "**High** = 5–9 H2H PAs, or pitcher profile + 300+ career PAs · "
+    "**Medium** = any H2H data, pitcher profile + 150+ PAs, or 300+ general PAs · "
+    "**Low** = pitcher profile only, or 100–299 general PAs · "
+    "**Very Low** = fewer than 100 career PAs"
 )
