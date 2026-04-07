@@ -35,7 +35,7 @@ class LLMError(Exception):
 _OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 _ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 _ANTHROPIC_VERSION = "2023-06-01"
-_HF_URL = "https://api-inference.huggingface.co/v1/chat/completions"
+_HF_URL = "https://router.huggingface.co/v1/chat/completions"
 
 
 def _build_openai_request(
