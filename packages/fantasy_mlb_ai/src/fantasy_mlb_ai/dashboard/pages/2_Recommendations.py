@@ -243,27 +243,45 @@ def _run_projections(roster: List[Dict], matchups: Dict[str, Dict]) -> List[Dict
             ev_per_pa = expected_hitter_points_per_pa(outcome_probs)
             expected_points = round(ev_per_pa * 4, 2)
 
-            sample_size = len(batter_pas)
-            if matchup_type == "head_to_head" and h2h_sample >= 10:
-                confidence = "very_high"
-            elif matchup_type == "head_to_head" and h2h_sample >= 5:
-                confidence = "high"
-            elif matchup_type == "head_to_head":
-                # any H2H data is more informative than a profile alone
-                confidence = "medium"
-            elif matchup_type == "pitcher_profile" and sample_size >= 300:
-                confidence = "high"
-            elif matchup_type == "pitcher_profile" and sample_size >= 150:
-                confidence = "medium"
-            elif matchup_type == "pitcher_profile":
-                confidence = "low"
-            elif sample_size >= 300:
-                # lots of general batter history, no pitcher context
-                confidence = "medium"
-            elif sample_size >= 100:
-                confidence = "low"
+            # --- Confidence via relative standard error ---
+            # Compute expected fantasy points independently for each PA, then
+            # measure how much the model's predictions vary.  RSE = SEM / mean
+            # captures both sample size and prediction variance in one number.
+            # Lower RSE = tighter distribution = higher confidence.
+            import numpy as _np
+            per_pa_ev = _np.array([
+                expected_hitter_points_per_pa(
+                    {label: float(p) for label, p in zip(OUTCOME_LABELS, row)}
+                )
+                for row in probs
+            ])
+            n = len(per_pa_ev)
+            mean_ev = per_pa_ev.mean()
+            std_ev = per_pa_ev.std() if n > 1 else 1.0
+            sem = std_ev / _np.sqrt(n)
+            # Avoid division by zero for players projected near 0 pts/PA
+            rse = sem / abs(mean_ev) if abs(mean_ev) > 0.01 else 1.0
+
+            # Matchup type scales RSE: specific data reduces effective uncertainty
+            _matchup_adj = {
+                "head_to_head": 0.55,
+                "pitcher_profile": 0.80,
+                "general": 1.20,
+            }
+            adj_rse = rse * _matchup_adj.get(matchup_type, 1.0)
+
+            if adj_rse < 0.08:
+                confidence = "very_high"   # ±8% relative error
+            elif adj_rse < 0.15:
+                confidence = "high"        # ±15%
+            elif adj_rse < 0.28:
+                confidence = "medium"      # ±28%
+            elif adj_rse < 0.50:
+                confidence = "low"         # ±50%
             else:
                 confidence = "very_low"
+
+            sample_size = n
 
             results.append({
                 "name": name,
@@ -271,6 +289,7 @@ def _run_projections(roster: List[Dict], matchups: Dict[str, Dict]) -> List[Dict
                 "team": team,
                 "projected_points": expected_points,
                 "confidence": confidence,
+                "confidence_rse": round(float(adj_rse), 3),
                 "matchup_type": matchup_type,
                 "opponent_pitcher": opponent_pitcher,
                 "opponent_team": opponent_team,
@@ -429,9 +448,11 @@ def _render_recommendations_table(df: pd.DataFrame) -> None:
                     else:
                         st.markdown("—")
                 with c4:
+                    rse = row.get("confidence_rse")
+                    rse_str = f" (RSE {rse:.2f})" if pd.notna(rse) else ""
                     st.markdown(
                         f'<span style="color:{conf_color};font-size:0.85em">'
-                        f'{conf.replace("_"," ").title()}</span>',
+                        f'{conf.replace("_"," ").title()}{rse_str}</span>',
                         unsafe_allow_html=True,
                     )
                 with c5:
@@ -568,10 +589,9 @@ st.download_button(
 )
 
 st.caption(
-    "Confidence legend: "
-    "**Very High** = 10+ head-to-head PAs vs today's pitcher · "
-    "**High** = 5–9 H2H PAs, or pitcher profile + 300+ career PAs · "
-    "**Medium** = any H2H data, pitcher profile + 150+ PAs, or 300+ general PAs · "
-    "**Low** = pitcher profile only, or 100–299 general PAs · "
-    "**Very Low** = fewer than 100 career PAs"
+    "Confidence is measured by **relative standard error (RSE)** — how much the model's "
+    "per-PA predictions vary, normalised by the projection size, then adjusted for matchup "
+    "quality (H2H ×0.55 · pitcher profile ×0.80 · general ×1.20). "
+    "**Very High** RSE < 0.08 · **High** < 0.15 · **Medium** < 0.28 · **Low** < 0.50 · "
+    "**Very Low** ≥ 0.50. RSE scores are shown next to each tier label."
 )
