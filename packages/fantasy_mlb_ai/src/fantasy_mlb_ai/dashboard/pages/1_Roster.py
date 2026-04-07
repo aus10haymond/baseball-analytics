@@ -88,23 +88,23 @@ st.divider()
 
 st.subheader("Add a Player")
 
-# Initialise autofill state
-if "roster_autofill_position" not in st.session_state:
-    st.session_state.roster_autofill_position = POSITIONS[0]
-if "roster_autofill_team" not in st.session_state:
-    st.session_state.roster_autofill_team = MLB_TEAMS[0]
-
 _all_player_names = get_player_names()
+
+# Initialise widget keys so the selectboxes have a defined starting value
+if "roster_position_select" not in st.session_state:
+    st.session_state.roster_position_select = POSITIONS[0]
+if "roster_team_select" not in st.session_state:
+    st.session_state.roster_team_select = MLB_TEAMS[0]
 
 
 def _on_player_name_change() -> None:
-    """Autofill position and team when a known player is selected."""
+    """Autofill position and team by writing directly into the widget keys."""
     selected = st.session_state.get("roster_player_name_select")
     if selected:
         info = get_player_info(selected)
         if info:
-            st.session_state.roster_autofill_position = info["position"]
-            st.session_state.roster_autofill_team = info["team"]
+            st.session_state.roster_position_select = info["position"]
+            st.session_state.roster_team_select = info["team"]
 
 
 col1, col2, col3, col4 = st.columns([3, 1.5, 3, 1.5])
@@ -119,14 +119,11 @@ with col1:
         placeholder="Type to search…",
     )
 
-_pos_index = POSITIONS.index(st.session_state.roster_autofill_position) if st.session_state.roster_autofill_position in POSITIONS else 0
-_team_index = MLB_TEAMS.index(st.session_state.roster_autofill_team) if st.session_state.roster_autofill_team in MLB_TEAMS else 0
-
 with col2:
-    position_input = st.selectbox("Position", POSITIONS, index=_pos_index, key="roster_position_select")
+    position_input = st.selectbox("Position", POSITIONS, key="roster_position_select")
 
 with col3:
-    team_input = st.selectbox("MLB Team", MLB_TEAMS, index=_team_index, key="roster_team_select")
+    team_input = st.selectbox("MLB Team", MLB_TEAMS, key="roster_team_select")
 
 with col4:
     st.write("")  # vertical spacing
@@ -141,9 +138,10 @@ if add_clicked:
         success = add_player(chosen_name, position_input, team_input)
         if success:
             st.success(f"Added {chosen_name} ({position_input})")
-            # Reset autofill state for next entry
-            st.session_state.roster_autofill_position = POSITIONS[0]
-            st.session_state.roster_autofill_team = MLB_TEAMS[0]
+            # Reset widgets for next entry
+            st.session_state.roster_player_name_select = ""
+            st.session_state.roster_position_select = POSITIONS[0]
+            st.session_state.roster_team_select = MLB_TEAMS[0]
             st.rerun()
         else:
             st.warning(f"{chosen_name} is already on your roster.")
