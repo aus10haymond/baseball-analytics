@@ -36,6 +36,7 @@ _OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 _ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 _ANTHROPIC_VERSION = "2023-06-01"
 _HF_URL = "https://router.huggingface.co/v1/chat/completions"
+_CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
 
 
 def _build_openai_request(
@@ -198,6 +199,10 @@ class LLMClient:
         if self.provider == "huggingface":
             return await self._call_openai_compat(
                 _HF_URL, f"Bearer {self.api_key}", prompt, system_prompt
+            )
+        if self.provider == "cerebras":
+            return await self._call_openai_compat(
+                _CEREBRAS_URL, f"Bearer {self.api_key}", prompt, system_prompt
             )
         if self.provider == "ollama":
             base = (self.base_url or "http://localhost:11434").rstrip("/")

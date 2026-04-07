@@ -155,6 +155,7 @@ class ChatExplainer:
         _default_models = {
             "anthropic": "claude-sonnet-4-6",
             "huggingface": "google/gemma-3-12b-it",
+            "cerebras": "llama3.1-8b",
             "ollama": "gemma3:4b",
             "openai": "gpt-4o-mini",
         }
