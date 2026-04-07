@@ -18,7 +18,7 @@ from typing import Optional
 
 import streamlit as st
 
-from ..utils.session_state import (
+from utils.session_state import (
     get_espn_credentials,
     has_espn_connected,
     set_roster,

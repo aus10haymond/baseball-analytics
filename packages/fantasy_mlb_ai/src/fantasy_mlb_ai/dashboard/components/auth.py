@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ..utils.session_state import get_current_user, is_authenticated
+from utils.session_state import get_current_user, is_authenticated
 
 
 def login_ui() -> None:
