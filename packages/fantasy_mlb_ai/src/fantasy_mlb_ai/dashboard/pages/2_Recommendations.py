@@ -361,7 +361,7 @@ def _render_projection_chart(df: pd.DataFrame) -> None:
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def _render_confidence_breakdown(df: pd.DataFrame) -> None:
@@ -383,7 +383,7 @@ def _render_confidence_breakdown(df: pd.DataFrame) -> None:
     )
     fig.update_traces(textposition="inside", textinfo="percent+label")
     fig.update_layout(showlegend=False, height=300, margin=dict(t=40, b=10))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def _render_recommendations_table(df: pd.DataFrame) -> None:
@@ -429,7 +429,7 @@ def _render_recommendations_table(df: pd.DataFrame) -> None:
                 with c5:
                     st.markdown(f"**{pts}** pts")
                 with c6:
-                    if error and row["matchup_type"] not in ("no_game", "pitcher"):
+                    if isinstance(error, str) and row["matchup_type"] not in ("no_game", "pitcher"):
                         st.caption(f"⚠️ {error[:40]}")
 
         st.divider()
