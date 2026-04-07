@@ -83,9 +83,9 @@ def _build_system_prompt(roster: List[Dict], projections: Optional[List[Dict]]) 
             lines.append(f"  - {p['name']} ({p['position']}, {p['team']})")
     else:
         lines.append(
-            f"{'Player':<25} {'Pos':<5} {'Team':<25} {'Proj Pts':>8} {'Confidence':<12} {'Matchup':<15} {'Pitcher'}"
+            f"{'Player':<25} {'Pos':<5} {'Team':<25} {'Proj Pts':>8} {'Confidence':<12} {'Matchup':<15} {'Opponent Pitcher'}"
         )
-        lines.append("-" * 100)
+        lines.append("-" * 105)
         for proj in sorted(projections, key=lambda x: x.get("projected_points") or 0, reverse=True):
             pts = proj.get("projected_points")
             pts_str = f"{pts:.2f}" if pts is not None else "N/A"
@@ -98,6 +98,12 @@ def _build_system_prompt(roster: List[Dict], projections: Optional[List[Dict]]) 
                 f"{proj.get('matchup_type', 'N/A'):<15} "
                 f"{proj.get('opponent_pitcher') or 'TBD'}"
             )
+
+        pitchers = [p for p in roster if p.get("position") in ("SP", "RP")]
+        if pitchers:
+            lines.append("\nUser's pitchers (SP/RP) on roster:")
+            for p in pitchers:
+                lines.append(f"  - {p['name']} ({p['position']}, {p['team']})")
 
     return "\n".join(lines)
 
