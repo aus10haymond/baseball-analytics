@@ -178,13 +178,13 @@ def _run_projections(roster: List[Dict], matchups: Dict[str, Dict]) -> List[Dict
             # Import projection helpers inline to avoid top-level import errors
             import sys as _sys
             from pathlib import Path as _Path
-            _mm = _Path(__file__).parents[7] / "matchup_machine" / "src"
+            _mm = _Path(__file__).parents[5] / "matchup_machine" / "src"
             if _mm.exists() and str(_mm) not in _sys.path:
                 _sys.path.insert(0, str(_mm))
 
-            from fantasy_inference import find_player_id  # type: ignore
-            from fantasy_scoring import expected_hitter_points_per_pa  # type: ignore
-            from build_dataset import OUTCOME_LABELS  # type: ignore
+            from matchup_machine.fantasy_inference import find_player_id  # type: ignore
+            from matchup_machine.fantasy_scoring import expected_hitter_points_per_pa  # type: ignore
+            from matchup_machine.build_dataset import OUTCOME_LABELS  # type: ignore
 
             batter_id = int(find_player_id(player_index, name))
             pitcher_id: Optional[int] = None

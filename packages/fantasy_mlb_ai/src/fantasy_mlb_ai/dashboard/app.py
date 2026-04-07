@@ -8,6 +8,13 @@ Streamlit Cloud:
     Set the main file path to the line above in the deploy settings.
 """
 
+import sys
+from pathlib import Path
+
+_DASHBOARD_DIR = Path(__file__).parent
+if str(_DASHBOARD_DIR) not in sys.path:
+    sys.path.insert(0, str(_DASHBOARD_DIR))
+
 import streamlit as st
 
 from utils.session_state import init_session_state
