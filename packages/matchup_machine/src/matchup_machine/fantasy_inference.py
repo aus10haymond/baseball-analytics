@@ -84,18 +84,24 @@ def load_artifacts() -> Tuple[
     return model, feature_cols, pitcher_profiles, batter_profiles, player_index, pa_proj, matchups
 
 
+def _normalize(s: str) -> str:
+    """Strip accent marks and lowercase for fuzzy name matching."""
+    import unicodedata
+    return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode("ascii").lower()
+
+
 def find_player_id(player_index: pd.DataFrame, name_query: str) -> int:
     """
     Fuzzy lookup: find a player ID whose name contains the query (case-insensitive).
-    Ignore "Unknown ######" rows so only real-named players are considered.
+    Normalizes unicode (e.g. José → Jose) so accent-free input still matches.
+    Ignores "Unknown ######" rows so only real-named players are considered.
     """
-    known = player_index[~player_index["player_name"].astype(str).str.startswith("Unknown")]
+    known = player_index[~player_index["player_name"].astype(str).str.startswith("Unknown")].copy()
 
-    matches = known[
-        known["player_name"]
-        .astype(str)
-        .str.contains(name_query, case=False, na=False)
-    ]
+    normalized_query = _normalize(name_query)
+    known["_norm"] = known["player_name"].astype(str).apply(_normalize)
+
+    matches = known[known["_norm"].str.contains(normalized_query, na=False)]
 
     if matches.empty:
         raise ValueError(f"No player found matching {name_query!r}")
