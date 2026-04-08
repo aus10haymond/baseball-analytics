@@ -31,6 +31,8 @@ dependencies = [
     # ESPN
     "espn-api>=0.31.0",
     "requests>=2.31.0",
+    # Diamond Mind admin (Redis client)
+    "redis>=5.0.0",
 ]
 
 # Workspace configuration for uv
