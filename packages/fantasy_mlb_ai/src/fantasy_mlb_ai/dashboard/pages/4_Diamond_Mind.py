@@ -89,10 +89,33 @@ with st.sidebar:
 # Redis availability check
 _redis_ok = get_client() is not None
 if not _redis_ok:
-    st.error(
-        "Cannot connect to Redis. Make sure Redis is running and "
-        "`DM_REDIS_HOST` / `DM_REDIS_PORT` are set in your Streamlit secrets.",
-        icon="🔴",
+    st.error("Cannot connect to Redis.", icon="🔴")
+    st.markdown(
+        """
+        The Diamond Mind agents communicate over Redis, which needs to be running
+        and reachable from Streamlit Cloud. The easiest free option is **Upstash**:
+
+        **1. Create a free Redis database at [upstash.com](https://upstash.com)**
+        - Sign up → Create Database → choose a region close to you
+        - Copy the **Endpoint**, **Port**, and **Password** from the database details page
+
+        **2. Add these to your Streamlit Cloud secrets**
+        (Settings → Secrets):
+        ```toml
+        DM_REDIS_HOST     = "your-endpoint.upstash.io"
+        DM_REDIS_PORT     = "6379"
+        DM_REDIS_PASSWORD = "your-password"
+        ```
+
+        **3. Also set these same values in your local `.env`** so local dev works:
+        ```
+        DM_REDIS_HOST=your-endpoint.upstash.io
+        DM_REDIS_PORT=6379
+        DM_REDIS_PASSWORD=your-password
+        ```
+
+        Once the secrets are saved, Streamlit Cloud will restart the app automatically.
+        """
     )
     st.stop()
 
