@@ -39,25 +39,104 @@ st.set_page_config(
 init_session_state()
 
 # ---------------------------------------------------------------------------
-# Sidebar
+# Home page content
 # ---------------------------------------------------------------------------
 
-with st.sidebar:
+def _home():
     st.title("⚾ Fantasy MLB AI")
-    st.caption("ML-powered lineup decisions")
-    st.divider()
+    st.subheader("ML-powered fantasy baseball projections and lineup advice")
 
-    # Navigation hint
     st.markdown(
         """
-        **Pages**
-        - 🏟️ **Roster** — Enter your players
-        - 📊 **Recommendations** — Today's projections
-        - 💬 **Explainer** — Ask the AI assistant
+        Welcome! This dashboard uses a trained XGBoost model on Statcast pitch-by-pitch
+        data to project daily fantasy points for your roster — adjusted for today's
+        probable pitcher matchups.
+
+        **Get started in 3 steps:**
         """
     )
 
-    # ML status indicator
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.info(
+            "**Step 1 — Enter Your Roster**\n\n"
+            "Go to the **Roster** page and add your players. "
+            "Include name, position, and MLB team.",
+            icon="🏟️",
+        )
+
+    with col2:
+        st.info(
+            "**Step 2 — Get Recommendations**\n\n"
+            "The **Recommendations** page projects today's fantasy points "
+            "for each player, adjusted for their pitching matchup.",
+            icon="📊",
+        )
+
+    with col3:
+        st.info(
+            "**Step 3 — Ask Questions**\n\n"
+            "The **Explainer** chatbot can answer questions like "
+            '"Should I start Judge today?" or "Who has the best matchup?"',
+            icon="💬",
+        )
+
+    st.divider()
+
+    from utils.session_state import get_roster, get_projections
+
+    roster = get_roster()
+    projections = get_projections()
+
+    if roster:
+        st.markdown(f"**Your roster:** {len(roster)} players loaded")
+        if projections:
+            import pandas as pd
+            df = pd.DataFrame(projections)
+            proj_col = "projected_points"
+            if proj_col in df.columns:
+                valid = df[df[proj_col].notna()]
+                if not valid.empty:
+                    top = valid.nlargest(3, proj_col)
+                    st.markdown("**Top projected players today:**")
+                    for _, row in top.iterrows():
+                        st.markdown(
+                            f"- **{row['name']}** ({row['position']}) — "
+                            f"{row[proj_col]:.2f} pts projected"
+                        )
+        else:
+            st.markdown("Go to **Recommendations** to run today's projections.")
+    else:
+        st.markdown("Go to **Roster** to add your players and get started.")
+
+    st.divider()
+    st.caption(
+        "Projections are based on historical Statcast data (2020–2024) and today's "
+        "MLB schedule. Not financial advice. Play responsibly."
+    )
+
+# ---------------------------------------------------------------------------
+# Navigation
+# ---------------------------------------------------------------------------
+
+_pages_dir = _DASHBOARD_DIR / "pages"
+
+pg = st.navigation(
+    [
+        st.Page(_home, title="App", url_path="app"),
+        st.Page(str(_pages_dir / "1_Roster.py"), title="Roster", url_path="roster"),
+        st.Page(str(_pages_dir / "2_Recommendations.py"), title="Recommendations", url_path="recommendations"),
+        st.Page(str(_pages_dir / "3_Explainer.py"), title="Explainer", url_path="explainer"),
+        st.Page(str(_pages_dir / "admin.py"), title="Admin", url_path="admin"),
+    ]
+)
+
+# ---------------------------------------------------------------------------
+# Sidebar extras (appear below the nav links)
+# ---------------------------------------------------------------------------
+
+with st.sidebar:
     st.divider()
     st.caption("System Status")
     if ml_available():
@@ -79,79 +158,20 @@ with st.sidebar:
     login_ui()
 
 # ---------------------------------------------------------------------------
-# Home page content
+# Hide admin from sidebar nav
 # ---------------------------------------------------------------------------
-
-st.title("⚾ Fantasy MLB AI")
-st.subheader("ML-powered fantasy baseball projections and lineup advice")
 
 st.markdown(
     """
-    Welcome! This dashboard uses a trained XGBoost model on Statcast pitch-by-pitch
-    data to project daily fantasy points for your roster — adjusted for today's
-    probable pitcher matchups.
-
-    **Get started in 3 steps:**
-    """
+    <style>
+    [data-testid="stSidebarNav"] a[href*="admin"] { display: none; }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
-col1, col2, col3 = st.columns(3)
+# ---------------------------------------------------------------------------
+# Run current page
+# ---------------------------------------------------------------------------
 
-with col1:
-    st.info(
-        "**Step 1 — Enter Your Roster**\n\n"
-        "Go to the **Roster** page and add your players. "
-        "Include name, position, and MLB team.",
-        icon="🏟️",
-    )
-
-with col2:
-    st.info(
-        "**Step 2 — Get Recommendations**\n\n"
-        "The **Recommendations** page projects today's fantasy points "
-        "for each player, adjusted for their pitching matchup.",
-        icon="📊",
-    )
-
-with col3:
-    st.info(
-        "**Step 3 — Ask Questions**\n\n"
-        "The **Explainer** chatbot can answer questions like "
-        '"Should I start Judge today?" or "Who has the best matchup?"',
-        icon="💬",
-    )
-
-st.divider()
-
-# Quick stats if roster exists
-from utils.session_state import get_roster, get_projections
-
-roster = get_roster()
-projections = get_projections()
-
-if roster:
-    st.markdown(f"**Your roster:** {len(roster)} players loaded")
-    if projections:
-        import pandas as pd
-        df = pd.DataFrame(projections)
-        proj_col = "projected_points"
-        if proj_col in df.columns:
-            valid = df[df[proj_col].notna()]
-            if not valid.empty:
-                top = valid.nlargest(3, proj_col)
-                st.markdown("**Top projected players today:**")
-                for _, row in top.iterrows():
-                    st.markdown(
-                        f"- **{row['name']}** ({row['position']}) — "
-                        f"{row[proj_col]:.2f} pts projected"
-                    )
-    else:
-        st.markdown("Go to **Recommendations** to run today's projections.")
-else:
-    st.markdown("Go to **Roster** to add your players and get started.")
-
-st.divider()
-st.caption(
-    "Projections are based on historical Statcast data (2020–2024) and today's "
-    "MLB schedule. Not financial advice. Play responsibly."
-)
+pg.run()

@@ -200,3 +200,4 @@ cache/
 PLAN.md
 AGENTS.md
 CLAUDE.md
+.claude/*
