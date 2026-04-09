@@ -71,6 +71,55 @@ MATCHUP_LABELS = {
 # MLB API helpers
 # ---------------------------------------------------------------------------
 
+@st.cache_data(ttl=86400, show_spinner=False)
+def fetch_actual_stats_for_date(date_str: str) -> Dict[str, float]:
+    """
+    Fetch actual batting stats from MLB boxscores and compute fantasy points.
+    Fantasy scoring: HR=6, 3B=3, 2B=2, 1B=1, BB=1, K=-1.
+    Returns {full_player_name: fantasy_points}.
+    """
+    schedule_url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date_str}"
+    try:
+        schedule = requests.get(schedule_url, timeout=10).json()
+    except Exception:
+        return {}
+
+    game_pks = [
+        game["gamePk"]
+        for date_info in schedule.get("dates", [])
+        for game in date_info.get("games", [])
+    ]
+    if not game_pks:
+        return {}
+
+    player_stats: Dict[str, float] = {}
+    for pk in game_pks:
+        try:
+            box = requests.get(
+                f"https://statsapi.mlb.com/api/v1/game/{pk}/boxscore", timeout=10
+            ).json()
+        except Exception:
+            continue
+
+        for side in ("home", "away"):
+            for player_data in box.get("teams", {}).get(side, {}).get("players", {}).values():
+                name = player_data.get("person", {}).get("fullName", "")
+                batting = player_data.get("stats", {}).get("batting", {})
+                if not batting or not name:
+                    continue
+                hits = batting.get("hits", 0) or 0
+                doubles = batting.get("doubles", 0) or 0
+                triples = batting.get("triples", 0) or 0
+                hr = batting.get("homeRuns", 0) or 0
+                walks = batting.get("baseOnBalls", 0) or 0
+                ks = batting.get("strikeOuts", 0) or 0
+                singles = hits - doubles - triples - hr
+                pts = hr * 6 + triples * 3 + doubles * 2 + singles + walks - ks
+                player_stats[name] = round(float(pts), 2)
+
+    return player_stats
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_matchups_for_date(date_str: str) -> Dict[str, Dict]:
     """
@@ -596,19 +645,16 @@ if existing_projections is None:
 df = pd.DataFrame(existing_projections)
 
 # ---------------------------------------------------------------------------
-# Load actuals for past dates
+# Load actuals for past dates (MLB boxscore API)
 # ---------------------------------------------------------------------------
 
 if is_past:
-    try:
-        from fantasy_mlb_ai.prediction_tracker import PredictionTracker
-        tracker = PredictionTracker()
-        actuals_df = tracker.get_predictions(start_date=date_str, end_date=date_str)
-        if not actuals_df.empty and "actual_points" in actuals_df.columns:
-            actuals_map = actuals_df.set_index("player_name")["actual_points"].to_dict()
-            df["actual_points"] = df["name"].map(actuals_map)
-    except Exception:
-        pass  # Tracker unavailable — show projections only
+    with st.spinner("Loading actual stats from MLB boxscores..."):
+        actuals_map = fetch_actual_stats_for_date(date_str)
+    if actuals_map:
+        df["actual_points"] = df["name"].map(actuals_map)
+    else:
+        st.info("No boxscore data found for this date.", icon="ℹ️")
 
 # ---------------------------------------------------------------------------
 # Summary metrics
@@ -638,7 +684,7 @@ st.divider()
 st.subheader("Player Breakdown")
 
 if is_past and "actual_points" in df.columns and df["actual_points"].notna().any():
-    st.caption("Actual points pulled from prediction tracker. Δ = actual − projected.")
+    st.caption("Actual points from MLB boxscores (HR×6, 3B×3, 2B×2, 1B×1, BB×1, K×−1). Δ = actual − projected.")
 
 # Filters
 filter_col1, filter_col2, _ = st.columns([2, 2, 4])
