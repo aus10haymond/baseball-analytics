@@ -12,7 +12,11 @@ _DASHBOARD_DIR = Path(__file__).parent.parent
 if str(_DASHBOARD_DIR) not in sys.path:
     sys.path.insert(0, str(_DASHBOARD_DIR))
 
-from datetime import date
+_SRC_DIR = Path(__file__).parents[3]  # .../src/
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+
+from datetime import date, timedelta
 from typing import Dict, List, Optional
 
 import pandas as pd
@@ -68,15 +72,14 @@ MATCHUP_LABELS = {
 # ---------------------------------------------------------------------------
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_todays_matchups() -> Dict[str, Dict]:
+def fetch_matchups_for_date(date_str: str) -> Dict[str, Dict]:
     """
-    Fetch today's probable pitchers from the free MLB Stats API.
+    Fetch probable pitchers from the free MLB Stats API for a given date.
     Returns {full_team_name: {opponent_pitcher, opponent_team, is_home}}.
     """
-    today = date.today().strftime("%Y-%m-%d")
     url = (
         f"https://statsapi.mlb.com/api/v1/schedule"
-        f"?sportId=1&date={today}&hydrate=probablePitcher"
+        f"?sportId=1&date={date_str}&hydrate=probablePitcher"
     )
     try:
         resp = requests.get(url, timeout=10)
@@ -358,35 +361,49 @@ def _render_summary_metrics(df: pd.DataFrame) -> None:
         st.metric("High-confidence picks", len(high_conf))
 
 
-def _render_projection_chart(df: pd.DataFrame) -> None:
+def _render_projection_chart(df: pd.DataFrame, show_actuals: bool = False) -> None:
     playable = df[df["projected_points"].notna() & ~df["position"].isin(["SP", "RP"])]
     if playable.empty:
         return
 
     sorted_df = playable.sort_values("projected_points", ascending=True)
     colors = [CONFIDENCE_COLORS.get(c, "#95a5a6") for c in sorted_df["confidence"]]
+    has_actuals = show_actuals and "actual_points" in sorted_df.columns and sorted_df["actual_points"].notna().any()
 
-    fig = go.Figure(go.Bar(
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
         x=sorted_df["projected_points"],
         y=sorted_df["name"],
+        name="Projected",
         orientation="h",
         marker_color=colors,
         text=[f"{v:.2f}" for v in sorted_df["projected_points"]],
         textposition="outside",
-        hovertemplate=(
-            "<b>%{y}</b><br>"
-            "Projected: %{x:.2f} pts<br>"
-            "<extra></extra>"
-        ),
+        hovertemplate="<b>%{y}</b><br>Projected: %{x:.2f} pts<extra></extra>",
     ))
+
+    if has_actuals:
+        fig.add_trace(go.Bar(
+            x=sorted_df["actual_points"],
+            y=sorted_df["name"],
+            name="Actual",
+            orientation="h",
+            marker_color="rgba(100,149,237,0.7)",
+            text=[f"{v:.2f}" if pd.notna(v) else "" for v in sorted_df["actual_points"]],
+            textposition="outside",
+            hovertemplate="<b>%{y}</b><br>Actual: %{x:.2f} pts<extra></extra>",
+        ))
+
     fig.update_layout(
-        title="Projected Fantasy Points Today",
-        xaxis_title="Projected Points",
+        barmode="group" if has_actuals else "relative",
+        title="Projected vs Actual Fantasy Points" if has_actuals else "Projected Fantasy Points",
+        xaxis_title="Points",
         yaxis_title="",
-        height=max(300, len(sorted_df) * 32),
+        height=max(300, len(sorted_df) * (52 if has_actuals else 32)),
         margin=dict(l=20, r=60, t=40, b=20),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(orientation="h", y=1.08) if has_actuals else dict(visible=False),
     )
     st.plotly_chart(fig, width="stretch")
 
@@ -421,6 +438,8 @@ def _render_recommendations_table(df: pd.DataFrame) -> None:
         by="projected_points", ascending=False, na_position="last"
     ).reset_index(drop=True)
 
+    has_actuals = "actual_points" in batters_ranked.columns and batters_ranked["actual_points"].notna().any()
+
     st.markdown("#### Batters")
     if batters_ranked.empty:
         st.info("No batters on roster.")
@@ -429,13 +448,16 @@ def _render_recommendations_table(df: pd.DataFrame) -> None:
             pts = f"{row['projected_points']:.2f}" if pd.notna(row["projected_points"]) else "—"
             conf = row["confidence"]
             conf_color = CONFIDENCE_COLORS.get(conf, "#95a5a6")
-            matchup_label = MATCHUP_LABELS.get(row["matchup_type"], row["matchup_type"])
             pitcher_str = row["opponent_pitcher"] if pd.notna(row.get("opponent_pitcher")) else "—"
             home_away = "🏠" if row.get("is_home") else "✈️"
             error = row.get("error")
 
             with st.container():
-                c1, c2, c3, c4, c5, c6 = st.columns([3, 1, 3, 2, 2, 2])
+                if has_actuals:
+                    c1, c2, c3, c4, c5, c6, c7 = st.columns([3, 1, 3, 2, 2, 2, 2])
+                else:
+                    c1, c2, c3, c4, c5, c6 = st.columns([3, 1, 3, 2, 2, 2])
+
                 with c1:
                     st.markdown(f"**{row['name']}**")
                 with c2:
@@ -456,10 +478,29 @@ def _render_recommendations_table(df: pd.DataFrame) -> None:
                         unsafe_allow_html=True,
                     )
                 with c5:
-                    st.markdown(f"**{pts}** pts")
+                    st.markdown(f"**{pts}** proj")
                 with c6:
-                    if isinstance(error, str) and row["matchup_type"] not in ("no_game", "pitcher"):
-                        st.caption(f"⚠️ {error[:40]}")
+                    if has_actuals:
+                        actual = row.get("actual_points")
+                        st.markdown(f"**{actual:.2f}** actual" if pd.notna(actual) else "— actual")
+                    else:
+                        if isinstance(error, str) and row["matchup_type"] not in ("no_game", "pitcher"):
+                            st.caption(f"⚠️ {error[:40]}")
+
+                if has_actuals:
+                    with c7:
+                        actual = row.get("actual_points")
+                        proj = row.get("projected_points")
+                        if pd.notna(actual) and pd.notna(proj):
+                            delta = actual - proj
+                            color = "#2ecc71" if delta >= 0 else "#e74c3c"
+                            sign = "+" if delta >= 0 else ""
+                            st.markdown(
+                                f'<span style="color:{color};font-size:0.85em">{sign}{delta:.2f}</span>',
+                                unsafe_allow_html=True,
+                            )
+                        else:
+                            st.markdown("—")
 
         st.divider()
 
@@ -481,8 +522,31 @@ def _render_recommendations_table(df: pd.DataFrame) -> None:
 # Main page
 # ---------------------------------------------------------------------------
 
-st.title("📊 Today's Recommendations")
-st.caption(f"Projections for {date.today().strftime('%A, %B %-d, %Y')}")
+st.title("📊 Recommendations")
+
+# ---------------------------------------------------------------------------
+# Date picker
+# ---------------------------------------------------------------------------
+
+date_col, btn_col, _ = st.columns([2, 2, 4])
+with date_col:
+    selected_date = st.date_input(
+        "📅 Date",
+        value=date.today(),
+        min_value=date(2020, 1, 1),
+        max_value=date.today() + timedelta(days=7),
+    )
+
+date_str = selected_date.strftime("%Y-%m-%d")
+is_past = selected_date < date.today()
+is_today = selected_date == date.today()
+
+date_label = (
+    f"Today · {selected_date.strftime('%A, %B %-d, %Y')}"
+    if is_today
+    else selected_date.strftime("%A, %B %-d, %Y")
+)
+st.caption(f"Projections for {date_label}")
 
 roster = get_roster()
 
@@ -506,25 +570,45 @@ if not ml_available():
 # Run / refresh projections
 # ---------------------------------------------------------------------------
 
-existing_projections = get_projections()
+proj_key = f"projections_{date_str}"
+existing_projections = st.session_state.get(proj_key)
 run_btn_label = "Refresh Projections" if existing_projections else "Run Projections"
 
-col_btn, col_status = st.columns([2, 6])
-with col_btn:
+with btn_col:
     run_clicked = st.button(run_btn_label, type="primary", use_container_width=True)
 
 if run_clicked or existing_projections is None:
-    with st.spinner("Fetching today's matchups and running projections..."):
-        matchups = fetch_todays_matchups()
+    spinner_msg = f"Fetching matchups for {date_str} and running projections..."
+    with st.spinner(spinner_msg):
+        matchups = fetch_matchups_for_date(date_str)
         projections = _run_projections(roster, matchups)
-        set_projections(projections)
+        st.session_state[proj_key] = projections
     st.success("Projections updated!")
     existing_projections = projections
+
+    # Also keep today's projections in the shared session state for the home page
+    if is_today:
+        set_projections(projections)
 
 if existing_projections is None:
     st.stop()
 
 df = pd.DataFrame(existing_projections)
+
+# ---------------------------------------------------------------------------
+# Load actuals for past dates
+# ---------------------------------------------------------------------------
+
+if is_past:
+    try:
+        from fantasy_mlb_ai.prediction_tracker import PredictionTracker
+        tracker = PredictionTracker()
+        actuals_df = tracker.get_predictions(start_date=date_str, end_date=date_str)
+        if not actuals_df.empty and "actual_points" in actuals_df.columns:
+            actuals_map = actuals_df.set_index("player_name")["actual_points"].to_dict()
+            df["actual_points"] = df["name"].map(actuals_map)
+    except Exception:
+        pass  # Tracker unavailable — show projections only
 
 # ---------------------------------------------------------------------------
 # Summary metrics
@@ -541,7 +625,7 @@ st.divider()
 chart_col, conf_col = st.columns([3, 1])
 
 with chart_col:
-    _render_projection_chart(df)
+    _render_projection_chart(df, show_actuals=is_past)
 
 with conf_col:
     _render_confidence_breakdown(df)
@@ -553,10 +637,14 @@ with conf_col:
 st.divider()
 st.subheader("Player Breakdown")
 
+if is_past and "actual_points" in df.columns and df["actual_points"].notna().any():
+    st.caption("Actual points pulled from prediction tracker. Δ = actual − projected.")
+
 # Filters
 filter_col1, filter_col2, _ = st.columns([2, 2, 4])
 with filter_col1:
-    show_no_game = st.checkbox("Show players with no game today", value=False)
+    no_game_label = f"Show players with no game on {date_str}" if not is_today else "Show players with no game today"
+    show_no_game = st.checkbox(no_game_label, value=False)
 with filter_col2:
     min_conf = st.selectbox(
         "Minimum confidence",
@@ -584,7 +672,7 @@ csv = df.to_csv(index=False)
 st.download_button(
     label="Download as CSV",
     data=csv,
-    file_name=f"recommendations-{date.today()}.csv",
+    file_name=f"recommendations-{date_str}.csv",
     mime="text/csv",
 )
 
